@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanoShield - Password Auditor</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.20/dist/lenis.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/lenis@1.1.20/dist/lenis.css">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0B0F19;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+        .animate-scan {
+            animation: scan 2s linear infinite;
+        }
+        .animate-shake {
+            animation: shake 0.2s ease-in-out 2;
+        }
+    </style>
+</head>
+<body class="text-slate-200 antialiased overflow-x-hidden">
+
+    <header class="border-b border-slate-800/80 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50 transition-all duration-300">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3 hover:opacity-80 transition">
+                <div class="h-9 w-9 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </div>
+                <span class="font-bold tracking-tight text-lg text-white">Scano<span class="text-cyan-400">Shield</span></span>
+            </a>
+            <div class="flex gap-6 text-sm text-slate-400">
+                <a href="#audit-section" class="hover:text-cyan-400 transition-colors">Auditor</a>
+                <a href="#generator-section" class="hover:text-cyan-400 transition-colors">Generator</a>
+                <a href="/" class="hover:text-cyan-400 transition-colors flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h2m0 0l5-5-5-5m-5 5h12M3 12l5 5"/></svg>
+                    Home
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-12 space-y-16" x-data="passwordApp()">
+        
+        <section class="text-center space-y-4 py-6">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/5 border border-cyan-500/20 text-xs text-cyan-400 font-medium tracking-wide uppercase">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                v2.0 Cryptographic Toolkit
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                Advanced Security <br><span class="bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 bg-clip-text text-transparent">Password Analysis Toolkit</span>
+            </h1>
+            <p class="text-slate-400 max-w-xl mx-auto text-sm md:text-base">
+                Evaluate password entropy, run secure real-time K-Anonymity breach checking, and deploy strong localized hashing layers instantly.
+            </p>
+        </section>
+
+        <section id="audit-section" class="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 md:p-8 backdrop-blur-sm shadow-xl relative overflow-hidden">
+            <div x-show="isAnalyzing" x-transition:enter="transition opacity duration-300" x-transition:leave="transition opacity duration-300" class="absolute inset-0 pointer-events-none z-10">
+                <div class="w-full h-0.5 bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-40 absolute top-0 animate-scan"></div>
+                <div class="absolute inset-0 bg-cyan-500/[0.02]"></div>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label for="password-input" class="block text-sm font-semibold text-slate-300 mb-2">Target Credential Input</label>
+                    <div class="relative">
+                        <input 
+                            :type="showPassword ? 'text' : 'password'" 
+                            id="password-input"
+                            x-model="password"
+                            @input="debouncedAudit"
+                            placeholder="Type a password to audit..." 
+                            class="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 rounded-xl px-4 py-3.5 pr-24 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/10 transition-all duration-200 mono tracking-wide"
+                            :class="{'animate-shake border-rose-500/50 focus:ring-rose-500/10': isCritical}"
+                        />
+                        <div class="absolute right-3 top-2.5 flex items-center gap-1.5">
+                            <button @click="showPassword = !showPassword" type="button" class="p-1.5 text-slate-400 hover:text-slate-200 transition-colors rounded-lg hover:bg-slate-800/50">
+                                <svg x-show="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                <svg x-show="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.025 10.025 0 014.132-5.4M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 21l-6-6m6-6l-6 6m6-6l-6-6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-medium">
+                    <div class="p-3 rounded-xl border flex items-center gap-2 transition-all duration-300 transform" :class="requirements.length ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 scale-[1.02]' : 'bg-slate-950 border-slate-900 text-slate-500'">
+                        <span class="w-1.5 h-1.5 rounded-full" :class="requirements.length ? 'bg-emerald-400' : 'bg-slate-700'"></span> Length &ge; 8
+                    </div>
+                    <div class="p-3 rounded-xl border flex items-center gap-2 transition-all duration-300 transform" :class="requirements.case ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 scale-[1.02]' : 'bg-slate-950 border-slate-900 text-slate-500'">
+                        <span class="w-1.5 h-1.5 rounded-full" :class="requirements.case ? 'bg-emerald-400' : 'bg-slate-700'"></span> Aa Mix
+                    </div>
+                    <div class="p-3 rounded-xl border flex items-center gap-2 transition-all duration-300 transform" :class="requirements.digit ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 scale-[1.02]' : 'bg-slate-950 border-slate-900 text-slate-500'">
+                        <span class="w-1.5 h-1.5 rounded-full" :class="requirements.digit ? 'bg-emerald-400' : 'bg-slate-700'"></span> Number (0-9)
+                    </div>
+                    <div class="p-3 rounded-xl border flex items-center gap-2 transition-all duration-300 transform" :class="requirements.special ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400 scale-[1.02]' : 'bg-slate-950 border-slate-900 text-slate-500'">
+                        <span class="w-1.5 h-1.5 rounded-full" :class="requirements.special ? 'bg-emerald-400' : 'bg-slate-700'"></span> Special Symbol
+                    </div>
+                </div>
+
+                <div x-show="password.length > 0" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="border-t border-slate-800/60 pt-6 space-y-6">
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-slate-950 border border-slate-900 rounded-xl p-4 flex flex-col justify-between space-y-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Strength Audit</p>
+                                    <h3 class="text-lg font-bold text-white mt-0.5" x-text="strengthResult.status">Evaluating...</h3>
+                                </div>
+                                <span class="mono text-xs px-2 py-1 bg-slate-900 rounded-md border border-slate-800 text-slate-400" x-text="'Score: ' + strengthResult.score + '/4'"></span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <div class="h-2 rounded-sm transition-all duration-500" :class="strengthResult.score >= 1 ? meterColor : 'bg-slate-900'"></div>
+                                <div class="h-2 rounded-sm transition-all duration-500" :class="strengthResult.score >= 2 ? meterColor : 'bg-slate-900'"></div>
+                                <div class="h-2 rounded-sm transition-all duration-500" :class="strengthResult.score >= 3 ? meterColor : 'bg-slate-900'"></div>
+                                <div class="h-2 rounded-sm transition-all duration-500" :class="strengthResult.score >= 4 ? meterColor : 'bg-slate-900'"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950 border border-slate-900 rounded-xl p-4 flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Mathematical Information Entropy</p>
+                                <h3 class="text-2xl font-bold text-white tracking-tight mt-1 mono" x-text="entropy + ' bits'">0.00 bits</h3>
+                                <p class="text-xs text-slate-400 mt-0.5" x-text="getEntropyLabel()"></p>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-5 rounded-xl border transition-all duration-500 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                        :class="leakResult.is_leaked ? 'bg-rose-500/5 border-rose-500/20' : 'bg-emerald-500/5 border-emerald-500/20'">
+                        <div class="space-y-1">
+                            <p class="text-xs font-semibold uppercase tracking-wider" :class="leakResult.is_leaked ? 'text-rose-400' : 'text-emerald-400'">
+                                Real-time Breach Vector Threat Check
+                            </p>
+                            <h4 class="text-base font-bold text-white flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full" :class="leakResult.is_leaked ? 'bg-rose-400 animate-ping' : 'bg-emerald-400'"></span>
+                                <span x-text="leakResult.status">Checking cross-border networks...</span>
+                            </h4>
+                            <p class="text-xs text-slate-400 max-w-xl" x-text="leakResult.message"></p>
+                        </div>
+                        <div class="text-right whitespace-nowrap self-stretch md:self-auto flex md:flex-col justify-between items-center bg-slate-950/40 p-3 rounded-lg md:bg-transparent md:p-0">
+                            <span class="text-xs text-slate-500 md:block hidden">Breach Records</span>
+                            <span class="text-xl font-black mono" :class="leakResult.is_leaked ? 'text-rose-400' : 'text-emerald-400'" x-text="leakResult.count">0</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/60 border border-slate-900 rounded-xl p-5 space-y-3">
+                        <h4 class="text-xs font-bold text-slate-400 tracking-wider uppercase">Strategic Remediation Tasks</h4>
+                        <ul class="space-y-2.5 text-sm text-slate-300">
+                            <template x-for="(suggestion, index) in strengthResult.suggestions" :key="index">
+                                <li class="flex items-start gap-2.5 transform transition-all duration-300">
+                                    <svg class="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span x-text="suggestion"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <section id="generator-section" class="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 md:p-8 backdrop-blur-sm shadow-xl space-y-6">
+            <div>
+                <h2 class="text-xl font-bold text-white tracking-tight">Vault-Grade Suggestion Engine</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Produce secure, randomized structural strings isolated executionally.</p>
+            </div>
+
+            <div class="p-4 bg-slate-950 border border-slate-900 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="mono text-base font-medium tracking-wider text-cyan-300 break-all w-full text-center sm:text-left select-all px-2" x-text="generatedPassword">
+                    Initializing seed...
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
+                    <button @click="generatePassword" type="button" class="p-2.5 text-slate-400 hover:text-white transition-colors border border-slate-800 hover:border-slate-700 bg-slate-900/50 rounded-xl" title="Regenerate">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"/></svg>
+                    </button>
+                    <button @click="copyToClipboard" type="button" class="px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-xl text-sm transition-all duration-200 shadow-lg shadow-cyan-600/10 hover:shadow-cyan-500/20 active:scale-95 whitespace-nowrap flex items-center gap-2">
+                        <span x-text="copied ? 'Copied!' : 'Copy String'"></span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+    function passwordApp() {
+        return {
+            password: '',
+            showPassword: false,
+            isAnalyzing: false,
+            isCritical: false,
+            entropy: 0.00,
+            generatedPassword: '',
+            copied: false,
+            debounceTimer: null,
+            
+            requirements: { length: false, case: false, digit: false, special: false },
+            strengthResult: { score: 0, status: 'Awaiting Input', suggestions: [] },
+            leakResult: { is_leaked: false, count: 0, status: 'CLEAN / SAFE', message: 'No credential signature parsed yet.' },
+
+            init() {
+                this.generatePassword();
+            },
+
+            getEntropyLabel() {
+                const e = this.entropy;
+                if (e === 0) return '';
+                if (e < 30) return 'Very low entropy — easily guessable';
+                if (e < 50) return 'Low entropy — needs improvement';
+                if (e < 70) return 'Fair entropy — moderate strength';
+                if (e < 90) return 'High entropy — strong password';
+                return 'Excellent entropy — extremely secure';
+            },
+
+            debouncedAudit() {
+                const pwd = this.password;
+                this.requirements.length = pwd.length >= 8;
+                this.requirements.case = /[a-z]/.test(pwd) && /[A-Z]/.test(pwd);
+                this.requirements.digit = /\d/.test(pwd);
+                this.requirements.special = /[ !@#$%^&*(),.?":{}|<>_+-]/.test(pwd);
+
+                if (!pwd) {
+                    this.isAnalyzing = false;
+                    this.isCritical = false;
+                    this.entropy = 0.00;
+                    this.strengthResult = { score: 0, status: 'Awaiting Input', suggestions: [] };
+                    this.leakResult = { is_leaked: false, count: 0, status: 'CLEAN / SAFE', message: 'No credential signature parsed yet.' };
+                    return;
+                }
+
+                this.isAnalyzing = true;
+                clearTimeout(this.debounceTimer);
+                this.debounceTimer = setTimeout(() => {
+                    this.runAuditPipeline();
+                }, 300);
+            },
+
+            async runAuditPipeline() {
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    const response = await fetch('/api/password-audit/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({ password: this.password })
+                    });
+                    
+                    if (!response.ok) throw new Error('Backend response error');
+                    const data = await response.json();
+                    
+                    this.entropy = data.entropy;
+                    this.strengthResult = {
+                        score: data.strength.score,
+                        status: data.strength.status,
+                        suggestions: data.strength.suggestions || []
+                    };
+                    this.leakResult = {
+                        is_leaked: data.leak.is_leaked,
+                        count: data.leak.count ? data.leak.count.toLocaleString() : 0,
+                        status: data.leak.status,
+                        message: data.leak.is_leaked 
+                            ? "This matching credential footprint was exposed across public index breaches." 
+                            : "No explicit matching string indices found inside public global repositories."
+                    };
+                    
+                    this.isCritical = (data.strength.score === 0);
+
+                } catch (error) {
+                    console.error("Backend connection failed:", error);
+                    this.leakResult = {
+                        is_leaked: false,
+                        count: 0,
+                        status: "Offline Mode",
+                        message: "Unable to reach the Django backend. Check if server is running."
+                    };
+                } finally {
+                    this.isAnalyzing = false;
+                }
+            },
+
+            get meterColor() {
+                if (this.isCritical) return 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]';
+                switch(this.strengthResult.score) {
+                    case 1: return 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]';
+                    case 2: return 'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]';
+                    case 3: return 'bg-teal-400 shadow-[0_0_10px_rgba(45,212,191,0.5)]';
+                    case 4: return 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]';
+                    default: return 'bg-slate-900';
+                }
+            },
+
+            generatePassword() {
+                const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=";
+                const len = 14;
+                let pwd = "";
+                while (true) {
+                    pwd = "";
+                    for (let i = 0; i < len; i++) {
+                        const randomIndex = crypto.getRandomValues(new Uint32Array(1))[0] % chars.length;
+                        pwd += chars[randomIndex];
+                    }
+                    if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd) && /\d/.test(pwd) && /[!@#$%^&*()_+-=]/.test(pwd)) {
+                        this.generatedPassword = pwd;
+                        break;
+                    }
+                }
+            },
+
+            copyToClipboard() {
+                navigator.clipboard.writeText(this.generatedPassword);
+                this.copied = true;
+                setTimeout(() => this.copied = false, 2000);
+            }
+        }
+    }
+
+    // Lenis smooth scroll
+    const lenis = new Lenis({
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true
+    });
+
+    function raf(time) {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+    </script>
+</body>
+</html>

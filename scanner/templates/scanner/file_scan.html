@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="csrf-token" content="{{ csrf_token }}">
+<title>E-Rakshak — File Security Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #030712;
+    --bg2: #0a0f1e;
+    --bg3: #0d1425;
+    --green: #00ff88;
+    --green2: #00cc6a;
+    --red: #ff3355;
+    --amber: #ffaa00;
+    --blue: #00aaff;
+    --cyan: #00eeff;
+    --text: #c8d8e8;
+    --muted: #4a6080;
+    --border: rgba(0,255,136,0.15);
+    --border2: rgba(0,255,136,0.3);
+    --glow: 0 0 20px rgba(0,255,136,0.2);
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-hud: 'Orbitron', monospace;
+    --font-body: 'Rajdhani', sans-serif;
+  }
+
+  html { scroll-behavior: auto; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* ── CUSTOM CURSOR ── */
+  .cursor {
+    position: fixed;
+    width: 10px; height: 10px;
+    background: var(--green);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%,-50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 32px; height: 32px;
+    border: 1px solid rgba(0,255,136,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%,-50%);
+    transition: transform 0.15s ease-out, width 0.2s, height 0.2s, border-color 0.2s;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SCANLINE OVERLAY ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+    animation: scanlines 8s linear infinite;
+  }
+
+  @keyframes scanlines {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 40px; }
+  }
+
+  /* ── LAYOUT ── */
+  .wrapper { position: relative; z-index: 2; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 48px;
+    background: rgba(3,7,18,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: var(--font-hud);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(0,255,136,0.5);
+  }
+
+  .nav-logo span { color: var(--text); }
+
+  .nav-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 48px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 3D rotating ring */
+  .hero-ring-container {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 600px; height: 600px;
+    pointer-events: none;
+  }
+
+  .ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    border-radius: 50%;
+    border: 1px solid;
+  }
+
+  .ring-1 {
+    width: 560px; height: 560px;
+    border-color: rgba(0,255,136,0.08);
+    animation: spin3d-1 20s linear infinite;
+  }
+  .ring-2 {
+    width: 460px; height: 460px;
+    border-color: rgba(0,238,255,0.06);
+    animation: spin3d-2 15s linear infinite reverse;
+  }
+  .ring-3 {
+    width: 360px; height: 360px;
+    border-color: rgba(0,255,136,0.12);
+    border-style: dashed;
+    animation: spin3d-1 10s linear infinite;
+  }
+
+  @keyframes spin3d-1 {
+    0%   { transform: translate(-50%,-50%) rotateX(70deg) rotateZ(0deg); }
+    100% { transform: translate(-50%,-50%) rotateX(70deg) rotateZ(360deg); }
+  }
+  @keyframes spin3d-2 {
+    0%   { transform: translate(-50%,-50%) rotateX(70deg) rotateZ(0deg); }
+    100% { transform: translate(-50%,-50%) rotateX(70deg) rotateZ(-360deg); }
+  }
+
+  /* Floating particles */
+  .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .particle {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: var(--green);
+    border-radius: 50%;
+    opacity: 0;
+    animation: float-particle linear infinite;
+  }
+
+  @keyframes float-particle {
+    0%   { opacity: 0; transform: translateY(0) scale(0); }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-80vh) scale(1.5); }
+  }
+
+  .hero-content {
+    position: relative;
+    text-align: center;
+    z-index: 2;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+    background: rgba(0,255,136,0.03);
+  }
+
+  .hero-title {
+    font-family: var(--font-hud);
+    font-size: clamp(48px, 8vw, 96px);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -2px;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  .hero-title .accent {
+    color: var(--green);
+    text-shadow: 0 0 40px rgba(0,255,136,0.4);
+    display: block;
+  }
+
+  .hero-sub {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  .hero-desc {
+    max-width: 480px;
+    margin: 0 auto 60px;
+    font-size: 17px;
+    color: var(--text);
+    opacity: 0.7;
+    line-height: 1.7;
+  }
+
+  /* ── SCANNER SECTION ── */
+  .scanner-section {
+    padding: 80px 48px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-title {
+    font-family: var(--font-hud);
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 48px;
+    letter-spacing: 1px;
+  }
+
+  /* ── DROP ZONE ── */
+  .drop-zone {
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 64px 32px;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    background: rgba(0,255,136,0.01);
+    transition: all 0.3s;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,255,136,0.03) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* corner brackets */
+  .drop-zone::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background:
+      linear-gradient(var(--green), var(--green)) top left / 20px 2px no-repeat,
+      linear-gradient(var(--green), var(--green)) top left / 2px 20px no-repeat,
+      linear-gradient(var(--green), var(--green)) top right / 20px 2px no-repeat,
+      linear-gradient(var(--green), var(--green)) top right / 2px 20px no-repeat,
+      linear-gradient(var(--green), var(--green)) bottom left / 20px 2px no-repeat,
+      linear-gradient(var(--green), var(--green)) bottom left / 2px 20px no-repeat,
+      linear-gradient(var(--green), var(--green)) bottom right / 20px 2px no-repeat,
+      linear-gradient(var(--green), var(--green)) bottom right / 2px 20px no-repeat;
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--green);
+    background: rgba(0,255,136,0.04);
+    box-shadow: 0 0 40px rgba(0,255,136,0.1), inset 0 0 40px rgba(0,255,136,0.03);
+  }
+
+  .drop-zone:hover::after, .drop-zone.dragover::after { opacity: 1; }
+
+  .drop-icon {
+    width: 72px; height: 72px;
+    margin: 0 auto 24px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: var(--bg2);
+  }
+
+  .drop-icon svg { color: var(--green); }
+
+  .drop-icon::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1px solid rgba(0,255,136,0.1);
+    border-radius: 6px;
+    animation: pulse-box 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-box {
+    0%,100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+  }
+
+  .drop-title {
+    font-family: var(--font-hud);
+    font-size: 18px;
+    color: #fff;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  .drop-sub {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+
+  .drop-file-input { display: none; }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--font-hud);
+    font-size: 13px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--green);
+    transform: translateX(-100%);
+    transition: transform 0.3s;
+    z-index: 0;
+  }
+
+  .scan-loader{
+    display:none;
+    text-align:center;
+    margin-top:40px;
+}
+
+.radar{
+    width:140px;
+    height:140px;
+    border-radius:50%;
+    border:2px solid #00ff88;
+    margin:auto;
+    position:relative;
+    overflow:hidden;
+}
+
+.radar::before{
+    content:'';
+    position:absolute;
+    width:50%;
+    height:50%;
+    background:rgba(0,255,136,.4);
+    transform-origin:100% 100%;
+    animation: radarSweep 1.5s linear infinite;
+}
+
+@keyframes radarSweep{
+    from{ transform:rotate(0deg);}
+    to{ transform:rotate(360deg);}
+}
+
+.scan-text{
+    margin-top:20px;
+    color:#00ff88;
+    font-family:'Orbitron';
+    letter-spacing:3px;
+}
+
+  .btn-primary:hover::before { transform: translateX(0); }
+  .btn-primary:hover { color: #000; box-shadow: 0 0 30px rgba(0,255,136,0.3); }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  .file-meta {
+    display: none;
+    margin-top: 20px;
+    padding: 16px 24px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text);
+    text-align: left;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .file-meta.visible { display: flex; }
+  .file-meta .fn { color: var(--green); flex: 1; }
+  .file-meta .fsize { color: var(--muted); white-space: nowrap; }
+
+  /* ── SCAN BUTTON ── */
+  .scan-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 28px;
+    justify-content: center;
+  }
+
+  .btn-scan {
+    padding: 18px 56px;
+    background: var(--green);
+    border: none;
+    color: #000;
+    font-family: var(--font-hud);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+    transition: all 0.3s;
+  }
+
+  .btn-scan:hover {
+    background: #00ffaa;
+    box-shadow: 0 0 40px rgba(0,255,136,0.5);
+    transform: translateY(-2px);
+  }
+
+  .btn-scan:disabled {
+    background: var(--muted);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* ── FEATURES ── */
+  .features-section {
+    padding: 120px 48px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 48px;
+  }
+
+  @media (max-width: 900px) { .features-grid { grid-template-columns: 1fr; } }
+
+  .feature-card {
+    padding: 32px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--bg2);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    cursor: default;
+  }
+
+  .feature-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    transform: scaleX(0);
+    transition: transform 0.4s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+
+  .feature-card:hover::after { transform: scaleX(1); }
+
+  .feature-icon {
+    width: 48px; height: 48px;
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    background: rgba(0,255,136,0.04);
+  }
+
+  .feature-num {
+    font-family: var(--font-hud);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    opacity: 0.6;
+  }
+
+  .feature-title {
+    font-family: var(--font-hud);
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  .feature-desc {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .footer-logo { color: var(--green); font-family: var(--font-hud); letter-spacing: 2px; }
+
+  /* ── UTILS ── */
+  .no-select { user-select: none; }
+  .full-w { grid-column: 1 / -1; }
+
+  /* ══════════════════════════════════════════
+     REPORT DASHBOARD
+  ══════════════════════════════════════════ */
+
+  /* Header */
+  .rpt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border: 1px solid var(--border2);
+    background: var(--bg2);
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+  }
+  .rpt-header-left { display: flex; flex-direction: column; gap: 4px; }
+  .rpt-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 3px;
+    opacity: 0.7;
+  }
+  .rpt-filename {
+    font-family: var(--font-hud);
+    font-size: 16px;
+    color: #fff;
+    letter-spacing: 1px;
+  }
+  .rpt-status-badge {
+    font-family: var(--font-hud);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 8px 20px;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+  }
+  .rpt-status-safe   { color: var(--green);  background: rgba(0,255,136,0.07); }
+  .rpt-status-warn   { color: var(--amber);  background: rgba(255,170,0,0.07); }
+  .rpt-status-danger { color: var(--red);    background: rgba(255,51,85,0.07); }
+
+  /* Metrics row */
+  .rpt-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--border2);
+    border-top: none;
+    border-bottom: none;
+  }
+  @media (max-width: 700px) { .rpt-metrics-grid { grid-template-columns: repeat(2,1fr); } }
+  .rpt-metric-card {
+    padding: 20px 24px;
+    border-right: 1px solid var(--border);
+    background: var(--bg3);
+    position: relative;
+  }
+  .rpt-metric-card:last-child { border-right: none; }
+  .rpt-metric-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .rpt-metric-value {
+    font-family: var(--font-hud);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--green);
+    line-height: 1;
+  }
+  .rpt-metric-value.rpt-small { font-size: 13px; line-height: 1.5; color: var(--text); }
+  .rpt-metric-sub { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .rpt-score-bar-bg {
+    height: 3px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .rpt-score-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(.4,0,.2,1);
+    background: var(--green);
+  }
+
+  /* Body */
+  .rpt-body {
+    border: 1px solid var(--border2);
+    border-top: none;
+    background: var(--bg3);
+    border-radius: 0 0 4px 4px;
+    overflow: hidden;
+  }
+
+  .rpt-section {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .rpt-section:last-child { border-bottom: none; }
+
+  .rpt-section-title {
+    font-family: var(--font-hud);
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.85;
+  }
+
+  .rpt-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  @media (max-width: 700px) { .rpt-two-col { grid-template-columns: 1fr; } }
+  .rpt-two-col .rpt-section { border-bottom: none; border-right: 1px solid var(--border); }
+  .rpt-two-col .rpt-section:last-child { border-right: none; }
+
+  /* KV grid (file info) */
+  .rpt-kv-grid {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 0;
+  }
+  .rpt-kv-key {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .rpt-kv-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    padding: 7px 0 7px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    word-break: break-all;
+  }
+  .rpt-kv-val.accent { color: var(--green); }
+  .rpt-kv-val.danger { color: var(--red); }
+
+  /* Hash list */
+  .rpt-hash-list { display: flex; flex-direction: column; gap: 10px; }
+  .rpt-hash-row { display: flex; align-items: flex-start; gap: 14px; }
+  .rpt-hash-alg {
+    font-family: var(--font-hud);
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 1px;
+    min-width: 52px;
+    padding-top: 2px;
+    opacity: 0.7;
+  }
+  .rpt-hash-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    word-break: break-all;
+    line-height: 1.5;
+  }
+
+  /* Prose (content summary) */
+  .rpt-prose {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 16px 20px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  /* Tag list */
+  .rpt-tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rpt-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 2px;
+    border: 1px solid var(--border2);
+    color: var(--green);
+    background: rgba(0,255,136,0.04);
+  }
+  .rpt-tag-empty {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* Pattern cards */
+  .rpt-pattern-list { display: flex; flex-direction: column; gap: 10px; }
+  .rpt-pattern-card {
+    padding: 14px 18px;
+    border: 1px solid rgba(255,170,0,0.2);
+    border-left: 3px solid var(--amber);
+    background: rgba(255,170,0,0.04);
+    border-radius: 0 2px 2px 0;
+  }
+  .rpt-pattern-name {
+    font-family: var(--font-hud);
+    font-size: 12px;
+    color: var(--amber);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .rpt-pattern-reason {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+    opacity: 0.8;
+  }
+  .rpt-safe-msg {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* VirusTotal */
+  .rpt-vt-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 700px) { .rpt-vt-grid { grid-template-columns: repeat(2,1fr); } }
+  .rpt-vt-stat {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    border-radius: 2px;
+    text-align: center;
+  }
+  .rpt-vt-num { font-family: var(--font-hud); font-size: 24px; font-weight: 700; }
+  .rpt-vt-lbl { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+  .rpt-vt-link {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--blue);
+    word-break: break-all;
+    text-decoration: none;
+  }
+  .rpt-vt-link:hover { text-decoration: underline; }
+  .rpt-vt-skipped {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    padding: 12px 0;
+  }
+
+  /* Warnings */
+  .rpt-warning-list { display: flex; flex-direction: column; gap: 10px; }
+  .rpt-warning-item {
+    padding: 12px 18px;
+    border: 1px solid rgba(255,51,85,0.2);
+    border-left: 3px solid var(--red);
+    background: rgba(255,51,85,0.04);
+    border-radius: 0 2px 2px 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+
+  /* Recommendation */
+  .rpt-reco-box {
+    padding: 20px 24px;
+    border-radius: 2px;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    font-weight: 500;
+    border: 1px solid var(--border2);
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
+<div class="wrapper">
+  <nav>
+    <div class="nav-logo">E-RAKSHAK <span>//</span></div>
+    <div class="nav-status">
+      <div class="status-dot"></div>
+      FILE PROCESSING SYSTEM v2.4
+    </div>
+  </nav>
+
+  <section class="hero no-select">
+    <div class="hero-ring-container">
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-3"></div>
+    </div>
+
+    <div class="particles" id="particles"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+        SYSTEM STATUS: ACTIVE
+      </div>
+      <h1 class="hero-title">
+        FILE <span class="accent">PROCESSING</span> SHIELD
+      </h1>
+      <p class="hero-sub">Advanced File Management UI</p>
+      <p class="hero-desc">
+        Select or drag a file to load it into the interface workspace.
+      </p>
+    </div>
+  </section>
+
+  <section class="scanner-section">
+    <div class="section-label">// MODULE 01</div>
+    <h2 class="section-title">Upload Workspace</h2>
+
+    <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Click or drag a file here">
+      <div class="drop-icon" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+      </div>
+      <p class="drop-title">DROP FILE HERE</p>
+      <p class="drop-sub">or click to browse · any file type accepted</p>
+      <button class="btn-primary" onclick="document.getElementById('fileInput').click()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>SELECT FILE</span>
+      </button>
+      <input type="file" id="fileInput" class="drop-file-input" aria-hidden="true" />
+    </div>
+
+    <div class="file-meta" id="fileMeta" aria-live="polite">
+      <svg width="18" height="18" fill="none" stroke="var(--green)" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="fn" id="metaName">—</span>
+      <span class="fsize" id="metaSize">—</span>
+    </div>
+
+    <div class="scan-row">
+      <button class="btn-scan" id="scanBtn" disabled onclick="handleFileProcess()">
+        PROCESS FILE
+      </button>
+    </div>
+     <div id="scanLoader" class="scan-loader">
+    <div class="radar"></div>
+    <div class="scan-text">
+        ANALYZING FILE...
+    </div>
+</div>
+    <div id="scanReportDashboard" style="display:none; margin-top:40px;">
+
+      <!-- Header bar -->
+      <div class="rpt-header">
+        <div class="rpt-header-left">
+          <span class="rpt-label">// TELEMETRY REPORT</span>
+          <span id="rptFilename" class="rpt-filename">—</span>
+        </div>
+        <div id="rptStatusBadge" class="rpt-status-badge">—</div>
+      </div>
+
+      <!-- Top metric cards -->
+      <div class="rpt-metrics-grid">
+        <div class="rpt-metric-card">
+          <div class="rpt-metric-label">RISK SCORE</div>
+          <div id="rptRiskScore" class="rpt-metric-value" style="color:var(--green)">—</div>
+          <div class="rpt-metric-sub">/ 100</div>
+          <div class="rpt-score-bar-bg"><div id="rptScoreBar" class="rpt-score-bar"></div></div>
+        </div>
+        <div class="rpt-metric-card">
+          <div class="rpt-metric-label">THREAT LEVEL</div>
+          <div id="rptThreat" class="rpt-metric-value">—</div>
+        </div>
+        <div class="rpt-metric-card">
+          <div class="rpt-metric-label">ENTROPY</div>
+          <div id="rptEntropy" class="rpt-metric-value" style="color:var(--cyan)">—</div>
+          <div class="rpt-metric-sub">/ 8.00</div>
+        </div>
+        <div class="rpt-metric-card">
+          <div class="rpt-metric-label">SCAN TIME</div>
+          <div id="rptScanTime" class="rpt-metric-value rpt-small">—</div>
+        </div>
+      </div>
+
+      <!-- Body sections -->
+      <div class="rpt-body">
+
+        <!-- FILE INFO -->
+        <div class="rpt-section">
+          <div class="rpt-section-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            FILE INFORMATION
+          </div>
+          <div class="rpt-kv-grid" id="rptFileInfo"></div>
+        </div>
+
+        <!-- HASHES -->
+        <div class="rpt-section">
+          <div class="rpt-section-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 12h10M12 7v10"/></svg>
+            CRYPTOGRAPHIC HASHES
+          </div>
+          <div class="rpt-hash-list" id="rptHashes"></div>
+        </div>
+
+        <!-- CONTENT SUMMARY -->
+        <div class="rpt-section">
+          <div class="rpt-section-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            CONTENT SUMMARY
+          </div>
+          <div id="rptContentSummary" class="rpt-prose"></div>
+        </div>
+
+        <!-- PERMISSIONS + CAPABILITIES side by side -->
+        <div class="rpt-two-col">
+          <div class="rpt-section">
+            <div class="rpt-section-title">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              PERMISSIONS
+            </div>
+            <div id="rptPermissions" class="rpt-tag-list"></div>
+          </div>
+          <div class="rpt-section">
+            <div class="rpt-section-title">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              CAPABILITIES
+            </div>
+            <div id="rptCapabilities" class="rpt-tag-list"></div>
+          </div>
+        </div>
+
+        <!-- DETECTED PATTERNS -->
+        <div class="rpt-section">
+          <div class="rpt-section-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            DETECTED PATTERNS
+          </div>
+          <div id="rptPatterns"></div>
+        </div>
+
+        <!-- VIRUSTOTAL -->
+        <div class="rpt-section">
+          <div class="rpt-section-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            VIRUSTOTAL ANALYSIS
+          </div>
+          <div id="rptVT"></div>
+        </div>
+
+        <!-- WARNINGS -->
+        <div class="rpt-section">
+          <div class="rpt-section-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            WARNINGS
+          </div>
+          <div id="rptWarnings"></div>
+        </div>
+
+        <!-- RECOMMENDATION -->
+        <div class="rpt-section" id="rptRecoSection">
+          <div class="rpt-section-title">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            RECOMMENDATION
+          </div>
+          <div id="rptReco" class="rpt-reco-box"></div>
+        </div>
+
+      </div><!-- /rpt-body -->
+
+      <!-- Download -->
+      <div style="margin-top:24px; text-align:center;">
+        <button onclick="downloadFullReport()" class="btn-scan" style="font-size:13px; padding:14px 40px;">
+          📥 DOWNLOAD FULL REPORT (TXT)
+        </button>
+      </div>
+
+    </div><!-- /scanReportDashboard -->
+  </section>
+
+  <section class="features-section">
+    <div class="section-label">// MODULE 02</div>
+    <h2 class="section-title">Workspace Modules</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="var(--green)" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="feature-num">01 / LOAD</div>
+        <div class="feature-title">File Ingestion</div>
+        <div class="feature-desc">Safely reads metadata and handles drag-and-drop actions locally via standard client APIs.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="var(--blue)" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="feature-num">02 / SIZE</div>
+        <div class="feature-title">Format Parsing</div>
+        <div class="feature-desc">Dynamically computes sizing parameters and structures filenames cleanly for the view engine.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="24" height="24" fill="none" stroke="var(--green)" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="feature-num">03 / UI</div>
+        <div class="feature-title">Reactive HUD</div>
+        <div class="feature-desc">Advanced cybernetic aesthetic design using GPU-accelerated micro-interactions and transitions.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="footer-logo">E-RAKSHAK</span>
+    <span>File Workspace UI · Educational Project</span>
+    <span>v2.4.0</span>
+  </footer>
+</div>
+
+<script>
+  /* ── Cursor ── */
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX;
+    my = e.clientY;
+    cursor.style.left = mx + 'px';
+    cursor.style.top = my + 'px';
+  });
+
+  (function animRing() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animRing);
+  })();
+
+  document.querySelectorAll('button, a, .drop-zone, .feature-card').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.width = '16px';
+      cursor.style.height = '16px';
+      ring.style.width = '48px';
+      ring.style.height = '48px';
+      ring.style.borderColor = 'rgba(0,255,136,0.8)';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.width = '10px';
+      cursor.style.height = '10px';
+      ring.style.width = '32px';
+      ring.style.height = '32px';
+      ring.style.borderColor = 'rgba(0,255,136,0.5)';
+    });
+  });
+
+  /* ── Particles ── */
+  const pContainer = document.getElementById('particles');
+  if (pContainer) {
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.top = Math.random() * 100 + '%';
+      p.style.animationDelay = Math.random() * 6 + 's';
+      p.style.animationDuration = (4 + Math.random() * 4) + 's';
+      pContainer.appendChild(p);
+    }
+  }
+
+  /* ── GSAP Reveal Animations ── */
+  window.addEventListener('load', () => {
+    const title = document.querySelector('.hero-title');
+    const badge = document.querySelector('.hero-badge');
+    const sub   = document.querySelector('.hero-sub');
+    const desc  = document.querySelector('.hero-desc');
+    
+    [badge, title, sub, desc].forEach((el, i) => {
+      if (!el) return;
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(30px)';
+      setTimeout(() => {
+        el.style.transition = 'opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+      }, 100 + i * 120);
+    });
+  });
+
+  /* ── Scroll Animation ── */
+  document.querySelectorAll('.feature-card, .scanner-section').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(40px)';
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+          obs.disconnect();
+        }
+      });
+    }, { threshold: 0.1 });
+    obs.observe(el);
+  });
+
+  /* ── File Ingestion Handlers ── */
+  let selectedFile = null;
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  });
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) setFile(fileInput.files[0]);
+  });
+
+  function setFile(f) {
+    selectedFile = f;
+    const fm = document.getElementById('fileMeta');
+    fm.classList.add('visible');
+    document.getElementById('metaName').textContent = f.name;
+    document.getElementById('metaSize').textContent = formatBytes(f.size);
+    document.getElementById('scanBtn').disabled = false;
+  }
+
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(2) + ' MB';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const scanBtn = document.getElementById('scanBtn');
+    if (scanBtn) {
+        // Jab user 'Process File' button par click karega
+        scanBtn.addEventListener('click', handleFileProcess);
+    }
+  });
+  /* ── DYNAMIC BACKEND INTERACTION PIPELINE ── */
+  
+  async function handleFileProcess() {
+    if (!selectedFile) return;
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    try {
+        const response = await fetch("/api/scan/", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrf-token]').content
+            },
+            body: formData
+        });
+        const report = await response.json();
+        renderDashboardReport(report);
+    } catch (error) {
+        alert("Error: " + error.message);
+    }
+}
+
+let currentReport = null;
+
+/* ── Threat level colour mapping ── */
+function threatColor(level) {
+  const map = {
+    CLEAN:    'var(--green)',
+    LOW:      '#aaff55',
+    MEDIUM:   'var(--amber)',
+    HIGH:     'var(--red)',
+    CRITICAL: '#ff0055',
+  };
+  return map[level] || 'var(--text)';
+}
+
+function threatStatusClass(level) {
+  if (!level || level === 'CLEAN') return 'rpt-status-safe';
+  if (level === 'LOW' || level === 'MEDIUM') return 'rpt-status-warn';
+  return 'rpt-status-danger';
+}
+
+function kv(label, value, cls = '') {
+  return `<div class="rpt-kv-key">${label}</div><div class="rpt-kv-val ${cls}">${value || '—'}</div>`;
+}
+
+function renderDashboardReport(report) {
+  currentReport = report;
+
+  const dashboard = document.getElementById('scanReportDashboard');
+  dashboard.style.display = 'block';
+
+  const threat = report.threat_level || 'CLEAN';
+  const score  = report.risk_score  || 0;
+  const hasWarnings = report.warnings && report.warnings.length > 0;
+  const status = hasWarnings ? (threat === 'CLEAN' ? 'WARNING ⚠' : threat + ' ⚠') : 'SAFE ✓';
+
+  /* ── Header ── */
+  document.getElementById('rptFilename').textContent = report.filename || '—';
+  const badge = document.getElementById('rptStatusBadge');
+  badge.textContent = status;
+  badge.className = 'rpt-status-badge ' + threatStatusClass(threat);
+
+  /* ── Metrics ── */
+  const scoreEl = document.getElementById('rptRiskScore');
+  scoreEl.textContent = score;
+  scoreEl.style.color = threatColor(threat);
+  document.getElementById('rptScoreBar').style.width = score + '%';
+  document.getElementById('rptScoreBar').style.background = threatColor(threat);
+
+  const threatEl = document.getElementById('rptThreat');
+  threatEl.textContent = threat;
+  threatEl.style.color = threatColor(threat);
+
+  const entropy = report.entropy != null ? report.entropy : '—';
+  const entropyEl = document.getElementById('rptEntropy');
+  entropyEl.textContent = entropy;
+  if (entropy >= 7) entropyEl.style.color = 'var(--red)';
+  else if (entropy >= 6) entropyEl.style.color = 'var(--amber)';
+  else entropyEl.style.color = 'var(--cyan)';
+
+  document.getElementById('rptScanTime').textContent = report.scan_time || '—';
+
+  /* ── File Info ── */
+  const mismatch = report.magic_mismatch;
+  document.getElementById('rptFileInfo').innerHTML = [
+    kv('File Name',   escHtml(report.filename)),
+    kv('Extension',   report.extension || '—'),
+    kv('Size',        report.size != null ? Number(report.size).toLocaleString() + ' bytes' : '—'),
+    kv('Category',    report.file_category),
+    kv('Real Type',   report.real_type),
+    kv('Language',    report.programming_language),
+    kv('Magic Type',  report.magic_type || 'Could not detect'),
+    kv('Extension Match', mismatch ? '⚠ MISMATCH DETECTED' : '✓ OK', mismatch ? 'danger' : 'accent'),
+  ].join('');
+
+  /* ── Hashes ── */
+  const h = report.hashes || {};
+  document.getElementById('rptHashes').innerHTML = ['md5','sha1','sha256'].map(alg =>
+    h[alg] ? `<div class="rpt-hash-row">
+      <span class="rpt-hash-alg">${alg.toUpperCase()}</span>
+      <span class="rpt-hash-val">${h[alg]}</span>
+    </div>` : ''
+  ).join('');
+
+  /* ── Content Summary ── */
+  document.getElementById('rptContentSummary').textContent =
+    report.content_summary || 'No summary available.';
+
+  /* ── Permissions ── */
+  const perms = report.permissions || [];
+  document.getElementById('rptPermissions').innerHTML = perms.length
+    ? perms.map(p => `<span class="rpt-tag">${escHtml(p)}</span>`).join('')
+    : '<span class="rpt-tag-empty">No permissions detected.</span>';
+
+  /* ── Capabilities ── */
+  const caps = report.capabilities || [];
+  document.getElementById('rptCapabilities').innerHTML = caps.length
+    ? caps.map(c => `<span class="rpt-tag">${escHtml(c)}</span>`).join('')
+    : '<span class="rpt-tag-empty">No capabilities detected.</span>';
+
+  /* ── Detected Patterns ── */
+  const findings = report.findings || [];
+  document.getElementById('rptPatterns').innerHTML = findings.length
+    ? `<div class="rpt-pattern-list">${findings.map(f => `
+        <div class="rpt-pattern-card">
+          <div class="rpt-pattern-name">⚠ ${escHtml(f.pattern)}</div>
+          <div class="rpt-pattern-reason">${escHtml(f.reason)}</div>
+        </div>`).join('')}</div>`
+    : '<span class="rpt-safe-msg">✓ No suspicious patterns detected.</span>';
+
+  /* ── VirusTotal ── */
+  const vt = report.virustotal || {};
+  let vtHtml = '';
+  if (vt.status === 'found') {
+    const mal = vt.malicious  || 0;
+    const sus = vt.suspicious || 0;
+    const cln = vt.undetected || 0;
+    const tot = vt.total      || 0;
+    vtHtml = `
+      <div class="rpt-vt-grid">
+        <div class="rpt-vt-stat"><div class="rpt-vt-num" style="color:var(--red)">${mal}</div><div class="rpt-vt-lbl">MALICIOUS</div></div>
+        <div class="rpt-vt-stat"><div class="rpt-vt-num" style="color:var(--amber)">${sus}</div><div class="rpt-vt-lbl">SUSPICIOUS</div></div>
+        <div class="rpt-vt-stat"><div class="rpt-vt-num" style="color:var(--green)">${cln}</div><div class="rpt-vt-lbl">CLEAN</div></div>
+        <div class="rpt-vt-stat"><div class="rpt-vt-num" style="color:var(--text)">${tot}</div><div class="rpt-vt-lbl">TOTAL ENGINES</div></div>
+      </div>
+      ${vt.link ? `<a class="rpt-vt-link" href="${escHtml(vt.link)}" target="_blank" rel="noopener">🔗 ${escHtml(vt.link)}</a>` : ''}`;
+  } else if (vt.status === 'not_found') {
+    vtHtml = '<div class="rpt-vt-skipped">File hash not found in VirusTotal database. File may be new or not yet analyzed.</div>';
+  } else if (vt.status === 'skipped') {
+    vtHtml = '<div class="rpt-vt-skipped">VirusTotal API key not configured.</div>';
+  } else if (vt.status === 'error') {
+    vtHtml = `<div class="rpt-vt-skipped" style="color:var(--amber)">⚠ ${escHtml(vt.reason || 'Unknown error.')}</div>`;
+  } else {
+    vtHtml = '<div class="rpt-vt-skipped">No VirusTotal data available.</div>';
+  }
+  document.getElementById('rptVT').innerHTML = vtHtml;
+
+  /* ── Warnings ── */
+  const warnings = report.warnings || [];
+  document.getElementById('rptWarnings').innerHTML = warnings.length
+    ? `<div class="rpt-warning-list">${warnings.map(w =>
+        `<div class="rpt-warning-item">${escHtml(w)}</div>`).join('')}</div>`
+    : '<span class="rpt-safe-msg">✓ No warnings generated.</span>';
+
+  /* ── Recommendation ── */
+  const recoMap = {
+    CLEAN:    { text: '✅ No significant security concerns detected. The file appears safe, but always verify the source before use.', bg: 'rgba(0,255,136,0.06)', border: 'rgba(0,255,136,0.3)', color: 'var(--green)' },
+    LOW:      { text: '🟡 Low risk detected. The file appears mostly safe, but verify its origin and purpose before opening or executing it.', bg: 'rgba(170,255,85,0.06)', border: 'rgba(170,255,85,0.3)', color: '#aaff55' },
+    MEDIUM:   { text: '🟠 Medium risk detected. Review the file carefully and ensure it comes from a trusted source before executing it.', bg: 'rgba(255,170,0,0.06)', border: 'rgba(255,170,0,0.3)', color: 'var(--amber)' },
+    HIGH:     { text: '🔴 High risk detected. Execute this file only in a controlled environment such as a sandbox or virtual machine.', bg: 'rgba(255,51,85,0.06)', border: 'rgba(255,51,85,0.3)', color: 'var(--red)' },
+    CRITICAL: { text: '🚨 Critical risk detected. Do NOT execute this file. Immediate malware analysis and further investigation are strongly recommended.', bg: 'rgba(255,0,85,0.08)', border: 'rgba(255,0,85,0.4)', color: '#ff0055' },
+  };
+  const reco = recoMap[threat] || recoMap.CLEAN;
+  const recoBox = document.getElementById('rptReco');
+  recoBox.textContent = reco.text;
+  recoBox.style.background = reco.bg;
+  recoBox.style.borderColor = reco.border;
+  recoBox.style.color = reco.color;
+
+  /* Scroll into view */
+  setTimeout(() => dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+}
+
+/* Escape HTML to prevent XSS from malicious filenames/patterns */
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function downloadFullReport() {
+  if (!currentReport?.full_report) return alert("Report not available");
+  const blob = new Blob([currentReport.full_report], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `E-Rakshak_Report_${currentReport.filename || 'scan'}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>

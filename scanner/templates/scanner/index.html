@@ -1,0 +1,417 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanoShield | Advanced Security Platform</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lenis@1.1.20/dist/lenis.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { overflow-x: hidden; background: #0a0a0a; }
+        canvas#bg-canvas { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 0; 
+            pointer-events: none;
+        }
+        .content { position: relative; z-index: 10; }
+        
+        /* Smooth Entry Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(40px); filter: blur(4px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+        
+        .fade-in-up {
+            opacity: 0;
+            animation: fadeInUp 0.8s cubic-bezier(0.215, 0.610, 0.355, 1) forwards;
+        }
+        
+        /* Stagger Delays */
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.25s; }
+        .delay-3 { animation-delay: 0.4s; }
+        .delay-4 { animation-delay: 0.55s; }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff, #06b6d4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    
+    <div class="content">
+        <!-- Navigation (Fades in slightly quicker) -->
+        <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/30 border-b border-white/10 fade-in-up">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+                <div class="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                    Scano<span class="text-white">Shield</span>
+                </div>
+                <div class="flex gap-6">
+                    <a href="#home" class="text-gray-300 hover:text-cyan-400 transition">Home</a>
+                    <a href="#features" class="text-gray-300 hover:text-cyan-400 transition">Tools</a>
+                    <a href="#how-it-works" class="text-gray-300 hover:text-cyan-400 transition">How It Works</a>
+                    <a href="#insights" class="text-gray-300 hover:text-cyan-400 transition">Insights</a>
+                    <a href="{% url 'cyber_news_page' %}" class="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-blue-500/50 text-slate-300 text-sm font-medium transition">Live Cyber News</a>
+                    <a href="{% url 'register_professional' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all shadow-lg shadow-blue-600/20 transform active:scale-95">🛡️ Upgrade to Professional Account</a>
+                    {% if user.is_staff or user.is_superuser %}
+                    <a href="{% url 'admin_approval_panel' %}" class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-500/30 text-indigo-400 font-bold text-sm transition-all shadow-lg shadow-indigo-600/5">⚙️Cybersecurity Control Panel</a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section (Staggered Load) -->
+        <section id="home" class="min-h-screen flex items-center justify-center px-6">
+            <div class="text-center max-w-4xl mx-auto">
+                <div class="inline-block px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-sm mb-6 backdrop-blur-sm fade-in-up delay-1">
+                    🔒 Advanced Security Platform
+                </div>
+                <h1 class="text-6xl md:text-8xl font-bold bg-gradient-to-r from-white via-cyan-200 to-blue-400 bg-clip-text text-transparent mb-6 fade-in-up delay-2">
+                    Complete File & Password Security
+                </h1>
+                <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto fade-in-up delay-3">
+                    Malware detection, entropy analysis, and breach monitoring — all in one place.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center fade-in-up delay-4">
+                    <a href="#features" class="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl font-semibold hover:scale-105 transition transform shadow-lg shadow-cyan-500/25">
+                        Explore Tools
+                    </a>
+                    <a href="/file-scanner/" class="px-8 py-4 border border-white/20 rounded-xl font-semibold hover:bg-white/5 transition">
+                        Start Scanning →
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="py-24 px-6">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Powerful Security Tools</h2>
+                    <p class="text-gray-400 text-lg">Choose the tool you need for comprehensive protection</p>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-8">
+                    <a href="/file-scanner/" class="group relative bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:border-cyan-500/50 transition-all duration-500 hover:scale-105">
+                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition"></div>
+                        <div class="relative">
+                            <div class="w-16 h-16 bg-cyan-500/20 rounded-xl flex items-center justify-center mb-6">
+                                <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-3">File Security Scanner</h3>
+                            <p class="text-gray-400 mb-6">Deep scan files for malware, suspicious patterns, entropy analysis, and VirusTotal integration.</p>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="px-2 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded">Malware Detection</span>
+                                <span class="px-2 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded">Entropy Analysis</span>
+                                <span class="px-2 py-1 bg-cyan-500/10 text-cyan-400 text-xs rounded">VirusTotal API</span>
+                            </div>
+                            <div class="inline-flex items-center gap-2 text-cyan-400 font-semibold group-hover:gap-3 transition">
+                                Launch Scanner 
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a href="{% url 'fraud_scanner_page' %}" class="group relative bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:border-orange-500/50 transition-all duration-500 hover:scale-105">
+                        <div class="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition"></div>
+                        <div class="relative">
+                            <div class="w-16 h-16 bg-orange-500/20 rounded-xl flex items-center justify-center mb-6">
+                                <svg class="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-3">Fraud Detector</h3>
+                            <p class="text-gray-400 mb-6">Analyze suspicious UPI IDs, Phone numbers, URLs, and Emails for scams and phishing threats.</p>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="px-2 py-1 bg-orange-500/10 text-orange-400 text-xs rounded">UPI/VPA Check</span>
+                                <span class="px-2 py-1 bg-orange-500/10 text-orange-400 text-xs rounded">Phishing URL</span>
+                                <span class="px-2 py-1 bg-orange-500/10 text-orange-400 text-xs rounded">Scam Alert</span>
+                            </div>
+                            <div class="inline-flex items-center gap-2 text-orange-400 font-semibold group-hover:gap-3 transition">
+                                Launch Fraud Shield 
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </a>
+
+                    <a href="/password/" class="group relative bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:border-purple-500/50 transition-all duration-500 hover:scale-105">
+                        <div class="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition"></div>
+                        <div class="relative">
+                            <div class="w-16 h-16 bg-purple-500/20 rounded-xl flex items-center justify-center mb-6">
+                                <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-3">Password Auditor</h3>
+                            <p class="text-gray-400 mb-6">Real-time password strength evaluation, entropy calculation, and breach detection using HIBP.</p>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded">Entropy Check</span>
+                                <span class="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded">Breach Detection</span>
+                                <span class="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded">Secure Generator</span>
+                            </div>
+                            <div class="inline-flex items-center gap-2 text-purple-400 font-semibold group-hover:gap-3 transition">
+                                Launch Auditor
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security Stats -->
+        <section class="py-20 px-6 bg-gradient-to-r from-cyan-950/30 to-purple-950/30">
+            <div class="max-w-6xl mx-auto">
+                <div class="grid md:grid-cols-4 gap-6 text-center">
+                    <div class="p-6">
+                        <div class="stat-number text-5xl">70+</div>
+                        <div class="text-gray-400 mt-2">Antivirus Engines</div>
+                        <div class="text-xs text-cyan-400">VirusTotal Integration</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="stat-number text-5xl">12B+</div>
+                        <div class="text-gray-400 mt-2">Breached Records</div>
+                        <div class="text-xs text-cyan-400">HIBP Database</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="stat-number text-5xl">99.9%</div>
+                        <div class="text-gray-400 mt-2">Detection Rate</div>
+                        <div class="text-xs text-cyan-400">For Known Malware</div>
+                    </div>
+                    <div class="p-6">
+                        <div class="stat-number text-5xl">Zero</div>
+                        <div class="text-gray-400 mt-2">Data Retention</div>
+                        <div class="text-xs text-cyan-400">Privacy First</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section id="how-it-works" class="py-24 px-6">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">How It Works</h2>
+                    <p class="text-gray-400 text-lg">Simple, fast, and secure</p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-12">
+                    <div>
+                        <h3 class="text-2xl font-bold text-cyan-400 mb-6 flex items-center gap-2"><span class="text-4xl">📁</span> File Scanner</h3>
+                        <div class="space-y-4">
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold">1</div>
+                                <div><p class="font-semibold text-white">Upload any file</p><p class="text-gray-400 text-sm">Drag & drop or click to select</p></div>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold">2</div>
+                                <div><p class="font-semibold text-white">Deep analysis</p><p class="text-gray-400 text-sm">Entropy, magic bytes, pattern matching, VirusTotal</p></div>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold">3</div>
+                                <div><p class="font-semibold text-white">Get detailed report</p><p class="text-gray-400 text-sm">Risk score, threats, and recommendations</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-bold text-orange-400 mb-6 flex items-center gap-2"><span class="text-4xl">🛡️</span> Fraud Detector</h3>
+                        <div class="space-y-4">
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold">1</div>
+                                <div><p class="font-semibold text-white">Input suspicious data</p><p class="text-gray-400 text-sm">Enter UPI ID, Phone, URL, Email or upload QR code</p></div>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold">2</div>
+                                <div><p class="font-semibold text-white">Cross-verification</p><p class="text-gray-400 text-sm">Scans WHOIS logs, UPI structures, OSINT & social profiles</p></div>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold">3</div>
+                                <div><p class="font-semibold text-white">Instant fraud alert</p><p class="text-gray-400 text-sm">Identifies threat level, potential scams & structural bugs</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2"><span class="text-4xl">🔑</span> Password Auditor</h3>
+                        <div class="space-y-4">
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">1</div>
+                                <div><p class="font-semibold text-white">Type or paste password</p><p class="text-gray-400 text-sm">Real‑time strength analysis</p></div>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">2</div>
+                                <div><p class="font-semibold text-white">Privacy‑first breach check</p><p class="text-gray-400 text-sm">K‑Anonymity API — never sends full password</p></div>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">3</div>
+                                <div><p class="font-semibold text-white">Get actionable advice</p><p class="text-gray-400 text-sm">Strength score, entropy, and secure generator</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Latest Security Insights -->
+        <section id="insights" class="py-24 px-6 bg-black/40">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Security Insights</h2>
+                    <p class="text-gray-400 text-lg">Stay ahead of emerging threats</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="bg-white/5 rounded-2xl p-6 border border-white/10 hover:border-cyan-500/30 transition">
+                        <div class="text-cyan-400 text-sm uppercase tracking-wider mb-2">Threat Report</div>
+                        <h3 class="text-xl font-bold text-white mb-2">Ransomware Up 41% in 2026</h3>
+                        <p class="text-gray-400 text-sm">New variants bypassing traditional defenses. Always scan email attachments.</p>
+                        <div class="mt-4 text-xs text-gray-500">Updated: June 2026</div>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-6 border border-white/10 hover:border-cyan-500/30 transition">
+                        <div class="text-cyan-400 text-sm uppercase tracking-wider mb-2">Password Tips</div>
+                        <h3 class="text-xl font-bold text-white mb-2">15 Billion Passwords Leaked</h3>
+                        <p class="text-gray-400 text-sm">HIBP now tracks 15B+ records. Your password might be compromised.</p>
+                        <div class="mt-4 text-xs text-gray-500">Check yours with our Auditor</div>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-6 border border-white/10 hover:border-cyan-500/30 transition">
+                        <div class="text-cyan-400 text-sm uppercase tracking-wider mb-2">Zero‑Day Alert</div>
+                        <h3 class="text-xl font-bold text-white mb-2">New PDF Exploit in Wild</h3>
+                        <p class="text-gray-400 text-sm">Malicious PDFs using JavaScript to download malware. Always verify sources.</p>
+                        <div class="mt-4 text-xs text-gray-500">Scan all PDFs before opening</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Call to Action -->
+        <section class="py-20 px-6">
+            <div class="max-w-4xl mx-auto text-center bg-gradient-to-r from-cyan-600/20 to-purple-600/20 rounded-3xl p-12 border border-white/10 backdrop-blur-sm">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Ready to secure your digital life?</h2>
+                <p class="text-gray-300 mb-8">Start using ScanoShield’s file scanner and password auditor now – completely free.</p>
+                <div class="flex flex-wrap gap-4 justify-center">
+                    <a href="/file-scanner/" class="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 rounded-xl font-semibold transition">Scan a File</a>
+                    <a href="/password/" class="px-6 py-3 bg-purple-500 hover:bg-purple-600 rounded-xl font-semibold transition">Audit a Password</a>
+                    <a href="{% url 'fraud_scanner_page' %}" class="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold transition shadow-lg shadow-orange-500/20">Check for Fraud</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t border-white/10 py-8 text-center text-gray-500 text-sm">
+            <p>ScanoShield - Advanced Security Platform | Powered by Django & Three.js</p>
+            <p class="text-xs mt-2">No files or passwords are stored. Privacy by design.</p>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Three.js Interactive 3D Background with Scroll Effect
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('bg-canvas'), alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+
+        const geometry = new THREE.TorusKnotGeometry(3, 0.8, 200, 32, 3, 4);
+        const material = new THREE.MeshStandardMaterial({ color: 0x06b6d4, wireframe: true, emissive: 0x06b6d4, emissiveIntensity: 0.3 });
+        const torusKnot = new THREE.Mesh(geometry, material);
+        scene.add(torusKnot);
+
+        // Subtly animating the background mesh entry scale
+        torusKnot.scale.set(0.1, 0.1, 0.1);
+
+        const particleCount = 2000;
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesPositions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            particlesPositions[i*3] = (Math.random() - 0.5) * 200;
+            particlesPositions[i*3+1] = (Math.random() - 0.5) * 100;
+            particlesPositions[i*3+2] = (Math.random() - 0.5) * 100 - 50;
+        }
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlesPositions, 3));
+        const particlesMaterial = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.1, transparent: true, opacity: 0.6 });
+        const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particles);
+
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x06b6d4, 1);
+        pointLight.position.set(10, 10, 10);
+        scene.add(pointLight);
+        const pointLight2 = new THREE.PointLight(0xff0066, 0.5);
+        pointLight2.position.set(-10, 5, 10);
+        scene.add(pointLight2);
+
+        camera.position.z = 15;
+        camera.position.y = 2;
+
+        let scrollProgress = 0;
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            smoothWheel: true
+        });
+
+        lenis.on('scroll', (e) => {
+            scrollProgress = e.animatedScroll / (document.body.scrollHeight - window.innerHeight);
+            const hue = scrollProgress * 360;
+            const color = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
+            torusKnot.material.color = color;
+            particlesMaterial.color = color;
+            pointLight.intensity = 0.5 + scrollProgress * 1.5;
+        });
+
+        function animate(time) {
+            lenis.raf(time);
+            
+            // Smoothly ease the 3D canvas scale from 0.1 to 1 on initial load
+            if (torusKnot.scale.x < 1) {
+                torusKnot.scale.x += 0.02;
+                torusKnot.scale.y += 0.02;
+                torusKnot.scale.z += 0.02;
+            }
+
+            torusKnot.rotation.x += 0.005;
+            torusKnot.rotation.y += 0.007;
+            torusKnot.rotation.z += 0.003;
+            particles.rotation.y += 0.0005;
+            particles.rotation.x = scrollProgress * Math.PI * 2;
+            camera.position.x = Math.sin(scrollProgress * Math.PI * 2) * 2;
+            camera.position.y = 2 + scrollProgress * 3;
+            camera.lookAt(0, 0, 0);
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+        
+        requestAnimationFrame(animate);
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

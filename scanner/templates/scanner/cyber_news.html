@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Cyber Threat Feed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-blue-500/20 pb-6 mb-8 gap-4">
+            <div>
+                <div class="flex items-center space-x-3 mb-2">
+                    <a href="{% url 'home' %}" class="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-blue-500/50 text-slate-400 hover:text-blue-400 transition">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Dashboard
+                    </a>
+                </div>
+                <h1 class="text-3xl font-extrabold tracking-wider bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                    LIVE CYBER THREAT MONITOR
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">ग्लोबल साइबर अटैक्स, मैलवेयर आउटब्रेक्स और सिक्योरिटी बुलेटिन की रीयल-टाइम फीड</p>
+            </div>
+            
+            <div class="flex items-center space-x-2 bg-blue-500/10 border border-blue-500/30 px-4 py-2 rounded-xl backdrop-blur-md self-start md:self-auto">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                </span>
+                <span class="text-xs font-mono tracking-widest text-blue-400 uppercase">
+                    Live Sync: {{ last_updated }}
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for item in news_feed %}
+                <div class="group relative flex flex-col justify-between bg-slate-900/40 rounded-xl overflow-hidden border border-blue-500/20 hover:border-indigo-500/50 transition-all duration-300 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] backdrop-blur-md">
+                    
+                    <div>
+                        <div class="relative h-48 w-full overflow-hidden border-b border-blue-500/10">
+                            <img src="{{ item.image }}" alt="Cyber Intel" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <span class="absolute top-3 left-3 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/40 text-blue-300 backdrop-blur-sm uppercase">
+                                {{ item.source }}
+                            </span>
+                        </div>
+
+                        <div class="p-5">
+                            <div class="text-[11px] text-slate-400 font-mono mb-2 flex items-center">
+                                <svg class="w-3.5 h-3.5 mr-1 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                {{ item.published }}
+                            </div>
+                            <h3 class="text-base font-bold text-slate-200 group-hover:text-blue-400 transition-colors duration-200 line-clamp-2">
+                                {{ item.title }}
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-3 line-clamp-4 leading-relaxed">
+                                {{ item.summary }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-5 pt-0">
+                        <a href="{{ item.link }}" target="_blank" class="w-full inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500 hover:text-white transition-all duration-200 group-hover:border-indigo-500/30">
+                            Read Full Intel Report
+                            <svg class="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-span-full py-16 text-center border border-dashed border-blue-500/20 rounded-xl bg-blue-500/5">
+                    <p class="text-sm text-slate-400">कोई लाइव फ़ीड उपलब्ध नहीं है। कृपया कुछ देर बाद रिफ्रेश करें।</p>
+                </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+</body>
+</html>
