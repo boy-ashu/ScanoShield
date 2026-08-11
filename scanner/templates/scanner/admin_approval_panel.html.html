@@ -1,0 +1,126 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanoShield | Admin Approval & Credential Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        body { background: #07090e; color: #fff; }
+    </style>
+</head>
+<body class="min-h-screen p-6 md:p-10">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 border-b border-indigo-500/20 pb-5">
+            <div>
+                <a href="{% url 'home' %}" class="text-xs text-indigo-400 hover:underline">← Main Dashboard</a>
+                <h1 class="text-3xl font-extrabold text-white mt-1">Admin Approval & Credentials Management</h1>
+            </div>
+            <span class="px-3 py-1 bg-red-500/10 border border-red-500/30 text-red-400 font-mono text-xs rounded-lg">ADMIN PRIVILEGE AREA</span>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="p-4 mb-6 rounded-xl border text-sm font-semibold
+                    {% if message.tags == 'success' %} bg-emerald-500/10 border-emerald-500/30 text-emerald-400
+                    {% else %} bg-amber-500/10 border-amber-500/30 text-amber-400 {% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Pending Approval Requests Grid -->
+        <div class="mb-10">
+            <h2 class="text-xl font-bold text-amber-400 mb-4 flex items-center gap-2">
+                ⏳ Pending Access Approvals ({{ pending_profiles.count }})
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for profile in pending_profiles %}
+                <div class="bg-white/5 border border-amber-500/30 rounded-2xl p-6 backdrop-blur-xl">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">{{ profile.user.username }}</h3>
+                            <p class="text-xs text-gray-400">{{ profile.user.email }}</p>
+                        </div>
+                        <span class="px-2.5 py-1 text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded uppercase">PENDING</span>
+                    </div>
+
+                    <div class="text-xs text-gray-300 space-y-1 font-mono mb-6 bg-black/40 p-3 rounded-lg">
+                        <p><strong class="text-gray-400">Company:</strong> {{ profile.company_name|default:"Not specified" }}</p>
+                        <p><strong class="text-gray-400">Designation:</strong> {{ profile.designation|default:"Not specified" }}</p>
+                        <p><strong class="text-gray-400">Phone:</strong> {{ profile.phone|default:"N/A" }}</p>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <form method="POST" class="w-full">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="approve">
+                            <input type="hidden" name="profile_id" value="{{ profile.id }}">
+                            <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl transition shadow-lg shadow-emerald-600/30">
+                                ✅ Approve & Assign Credential
+                            </button>
+                        </form>
+
+                        <form method="POST" class="w-1/3">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reject">
+                            <input type="hidden" name="profile_id" value="{{ profile.id }}">
+                            <button type="submit" class="w-full py-2.5 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 text-xs font-semibold rounded-xl transition">
+                                ❌ Reject
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-2 bg-white/5 border border-white/10 p-8 rounded-2xl text-center text-gray-500">
+                    No pending approval requests.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Authorized Users & Credentials Table -->
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 mb-10 shadow-2xl">
+            <h2 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                🛡️ Approved Users & Assigned Credentials
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs font-mono text-gray-300">
+                    <thead class="bg-black/60 text-gray-400 uppercase tracking-wider border-b border-white/10">
+                        <tr>
+                            <th class="p-3">User</th>
+                            <th class="p-3">Assigned Credential ID</th>
+                            <th class="p-3">Company / Position</th>
+                            <th class="p-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for profile in approved_profiles %}
+                        <tr class="hover:bg-white/5 transition">
+                            <td class="p-3 text-white font-bold">{{ profile.user.username }}</td>
+                            <td class="p-3"><span class="px-2 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 rounded font-mono">{{ profile.emp_id|default:"EMP-UNKNOWN" }}</span></td>
+                            <td class="p-3 text-gray-400">{{ profile.company_name }} ({{ profile.designation }})</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AUTHORIZED</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="p-4 text-center text-gray-500">No approved user profiles found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

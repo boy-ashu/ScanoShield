@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanoShield | Professional Cybersecurity Command Center</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        body { background: #07090e; color: #fff; overflow-x: hidden; }
+        
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+        .glow-indigo { animation: pulseGlow 4s infinite ease-in-out; }
+    </style>
+</head>
+<body class="bg-[#07090e] min-h-screen flex flex-col justify-between">
+
+    <!-- Background Grid Line Effect -->
+    <div class="fixed inset-0 pointer-events-none bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] z-0"></div>
+
+  <!-- Navigation Bar -->
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/50 border-b border-indigo-500/20">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <!-- Logo connects back home -->
+        <a href="{% url 'home' %}" class="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2">
+            🛡️ Scano<span class="text-white">Shield</span>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 rounded uppercase">PRO SUITE</span>
+        </a>
+        <div class="flex gap-6 items-center text-sm">
+            <!-- Back to main portal link -->
+            <a href="{% url 'home' %}" class="text-gray-400 hover:text-cyan-400 transition flex items-center gap-1">
+                ← Back to Main Portal
+            </a>
+            <div class="flex items-center gap-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl px-3 py-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-xs text-gray-300 font-medium">Analyst: <span class="text-white font-bold">{{ user.username|default:"SOC_Analyst" }}</span></span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+    <!-- Main Content Container -->
+    <main class="pt-28 pb-16 px-6 max-w-7xl mx-auto relative z-10 flex-grow w-full">
+        
+        <!-- Header Banner -->
+        <div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-indigo-950/40 via-blue-950/20 to-black border border-indigo-500/30 rounded-2xl p-6 shadow-2xl">
+            <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-mono mb-3">
+                    ⚡ CLEARANCE: LEVEL-2 ANALYST
+                </div>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-white">
+                    Cybersecurity Professional Console
+                </h1>
+                <p class="text-gray-400 text-sm mt-1">
+                    Advanced threat intelligence, automated IOC correlation, API key orchestration, and SOC diagnostics.
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <button class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl transition shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                    🔑 Manage API Keys
+                </button>
+                <button class="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-semibold rounded-xl transition">
+                    📄 Export SOC Report
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric Counters Row -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                <div class="text-xs font-medium text-gray-400 mb-1">Monthly API Quota</div>
+                <div class="text-2xl font-bold text-indigo-400 font-mono">14,250 / 50,000</div>
+                <div class="w-full bg-white/10 rounded-full h-1.5 mt-3">
+                    <div class="bg-indigo-500 h-1.5 rounded-full" style="width: 28.5%"></div>
+                </div>
+            </div>
+
+            <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                <div class="text-xs font-medium text-gray-400 mb-1">Threat Feeds Sync</div>
+                <div class="text-2xl font-bold text-emerald-400 font-mono">12 Active Feeds</div>
+                <div class="text-[11px] text-gray-500 mt-2">VirusTotal, AbuseIPDB, OTX, CISA</div>
+            </div>
+
+            <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                <div class="text-xs font-medium text-gray-400 mb-1">Automated Scans</div>
+                <div class="text-2xl font-bold text-cyan-400 font-mono">{{ total_scans|default:1892 }} Completed</div>
+                <div class="text-[11px] text-gray-500 mt-2">Zero false-positives flagged</div>
+            </div>
+
+            <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                <div class="text-xs font-medium text-gray-400 mb-1">System Defense Status</div>
+                <div class="text-2xl font-bold text-emerald-400 flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500"></span> OPTIMAL
+                </div>
+                <div class="text-[11px] text-gray-500 mt-2">All scanners operational</div>
+            </div>
+        </div>
+
+        <!-- Advanced Operations Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+            
+            <!-- Tool 1: Metadata & Geolocation -->
+            <div class="bg-white/5 backdrop-blur-xl border border-indigo-500/20 rounded-2xl p-6 hover:border-indigo-500/50 transition">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-12 h-12 bg-indigo-500/20 border border-indigo-500/30 rounded-xl flex items-center justify-center text-2xl text-indigo-400">🌐</div>
+                    <span class="text-[10px] bg-indigo-500/20 text-indigo-300 font-mono px-2 py-0.5 rounded border border-indigo-500/30">GEOLOCATION</span>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Network & Geo Lookup</h3>
+                <p class="text-gray-400 text-sm leading-relaxed mb-6">
+                    Inspect IP addresses, domain metadata, phone numbers, and active MX record status.
+                </p>
+                <a href="{% url 'locator_page' %}" class="w-full py-2.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 text-indigo-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                    <span>Execute Lookup</span> →
+                </a>
+            </div>
+
+        <!-- Recent Audit Activity Log Table -->
+        <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="text-indigo-400">📊</span> Professional Audit History
+                    </h3>
+                    <p class="text-gray-400 text-xs">Recent security scans executed under your professional credentials</p>
+                </div>
+                <span class="text-xs bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full border border-indigo-500/30 font-mono">LOG_STREAM: LIVE</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-gray-300 font-mono">
+                    <thead class="bg-black/60 text-gray-400 uppercase tracking-wider border-b border-white/10">
+                        <tr>
+                            <th class="p-3">Timestamp</th>
+                            <th class="p-3">Target</th>
+                            <th class="p-3">Module</th>
+                            <th class="p-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for log in recent_logs %}
+                        <tr class="hover:bg-white/5 transition">
+                            <td class="p-3 text-gray-400">{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+                            <td class="p-3 text-white font-bold">{{ log.query }}</td>
+                            <td class="p-3 uppercase">{{ log.input_type }}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">LOGGED</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="p-4 text-center text-gray-500">No recent scan history available.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/10 bg-black/60 relative z-10 py-6 text-center text-xs text-gray-500">
+        <p>ScanoShield Professional SOC Suite | Strictly Authorized Operations Only</p>
+    </footer>
+
+</body>
+</html>

@@ -7,7 +7,7 @@ import tempfile
 import json
 import ssl
 import uuid
-
+from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -94,6 +94,136 @@ def get_client_ip(request) -> str:
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+def locator_page(request):
+    return render(request, 'scanner/locator.html')
+
+# ========================================================
+# AUTHENTICATION & ACCESS REQUEST VIEWS
+# ========================================================
+
+def login_page(request):
+    """
+    Handles Analyst Login and Access Requests.
+    Removed auto-redirect for already authenticated users so the form is visible.
+    """
+    if request.method == "POST":
+        form_type = request.POST.get('form_type')
+
+        # 1. ANALYST LOGIN
+        if form_type == "login":
+            u = request.POST.get('username', '').strip()
+            p = request.POST.get('password', '').strip()
+            
+            user = authenticate(request, username=u, password=p)
+            if user is not None:
+                login(request, user)
+                profile = getattr(user, 'userprofile', None)
+                
+                # Verify admin clearance after authenticating
+                if user.is_staff or (profile and profile.is_authorized):
+                    return redirect('pro_home_page')
+                else:
+                    messages.warning(request, "Access Denied: Your account is pending Admin clearance.")
+                    return redirect('login_page')
+            else:
+                messages.error(request, "Invalid credentials. Contact system administrator or request access.")
+
+        # 2. ACCESS REQUEST FORM SUBMISSION
+        elif form_type == "register":
+            full_name = request.POST.get('full_name', '').strip()
+            email = request.POST.get('email', '').strip()
+            phone = request.POST.get('phone', '').strip()
+            company = request.POST.get('company', '').strip()
+            designation = request.POST.get('designation', '').strip()
+
+            client_ip = get_client_ip(request)
+
+            UserSubmissionLog.objects.create(
+                full_name=f"{full_name} ({company} - {designation})",
+                email=email,
+                phone_number=phone,
+                ip_address=client_ip,
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+
+            messages.success(request, "Access request submitted! Admin will review your details.")
+            return redirect('login_page')
+
+    return render(request, 'scanner/login.html')
+
+
+@login_required(login_url='login_page')
+def pro_home_page(request):
+    """
+    Protected Pro Console.
+    Requires user to be staff OR authorized by Admin.
+    """
+    profile = getattr(request.user, 'userprofile', None)
+    
+    if request.user.is_staff or (profile and profile.is_authorized):
+        return render(request, 'scanner/pro_home.html')
+    
+    messages.warning(request, "Access Denied: Your account is pending Admin clearance.")
+    return redirect('login_page')
+
+@staff_member_required
+def admin_approval_panel(request):
+    """
+    Control panel for Admins to approve/reject access requests and assign Employee Credentials.
+    Renders 'scanner/admin_pannal.html'.
+    """
+    if request.method == "POST":
+        action = request.POST.get('action')
+        
+        # 1. Action: Approve Profile and Assign Credential (Employee ID)
+        if action == 'approve':
+            profile_id = request.POST.get('profile_id')
+            profile = get_object_or_404(UserProfile, id=profile_id)
+            
+            # Generate/assign credential if missing
+            if not profile.emp_id:
+                profile.emp_id = f"EMP-{uuid.uuid4().hex[:6].upper()}"
+            
+            profile.is_authorized = True
+            profile.save()
+            
+            # Ensure the user account itself is activated
+            profile.user.is_active = True
+            profile.user.save()
+            
+            messages.success(request, f"Approved user '{profile.user.username}'. Assigned Credential ID: {profile.emp_id}")
+
+        # 2. Action: Reject Profile
+        elif action == 'reject':
+            profile_id = request.POST.get('profile_id')
+            profile = get_object_or_404(UserProfile, id=profile_id)
+            profile.is_authorized = False
+            profile.role = 'normal'
+            profile.save()
+            
+            messages.warning(request, f"Rejected access request for '{profile.user.username}'.")
+
+        # 3. Action: Clear Submission Log entry
+        elif action == 'delete_log':
+            log_id = request.POST.get('log_id')
+            UserSubmissionLog.objects.filter(id=log_id).delete()
+            messages.info(request, "Submission log removed.")
+
+        return redirect('admin_logs')
+
+    # Data queries
+    pending_profiles = UserProfile.objects.filter(is_authorized=False, role='professional')
+    approved_profiles = UserProfile.objects.filter(is_authorized=True)
+    access_logs = UserSubmissionLog.objects.all().order_by('-created_at')[:20]
+
+    context = {
+        'pending_profiles': pending_profiles,
+        'approved_profiles': approved_profiles,
+        'access_logs': access_logs,
+    }
+    
+    # Renders your updated template name: admin_pannal.html
+    return render(request, 'scanner/admin_pannal.html', context)
 
 # ========================================================
 # 1. CYBER NEWS FETCHING LOGIC
@@ -155,7 +285,52 @@ def fetch_cyber_news():
             
     return parsed_news
 
+# Add this endpoint in views.py
 
+@csrf_exempt
+def lookup_api(request):
+    """
+    API Endpoint for Geolocation and Metadata Analysis.
+    Supports POST with JSON or Form Data containing 'query' and optional 'type'.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            query = data.get('query', '').strip()
+            forced_type = data.get('type', None)
+        else:
+            query = request.POST.get('query', '').strip()
+            forced_type = request.POST.get('type', None)
+
+        if not query:
+            return JsonResponse({"error": "Empty search query provided."}, status=400)
+
+        input_type = forced_type if forced_type else utils.detect_input_type(query)
+        result = {}
+
+        if input_type == "ip":
+            result = utils.lookup_ip(query)
+        elif input_type == "phone":
+            result = utils.lookup_phone(query)
+        elif input_type == "email":
+            result = utils.lookup_email(query)
+        elif input_type == "domain":
+            result = utils.lookup_domain(query)
+            if "resolved_ip" in result:
+                result["ip_data"] = utils.lookup_ip(result["resolved_ip"])
+        else:
+            return JsonResponse({"error": "Unsupported or unrecognized input format."}, status=400)
+
+        # Log search query
+        SearchLog.objects.create(query=query, input_type=input_type)
+
+        return JsonResponse(result)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 # ========================================================
 # 2. PAGE RENDERING VIEWS & DATA CAPTURE
 # ========================================================

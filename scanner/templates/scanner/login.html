@@ -1,0 +1,129 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanoShield | SOC Analyst Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="bg-[#07090e] min-h-screen flex items-center justify-center p-6 text-white">
+
+    <div class="fixed inset-0 pointer-events-none bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] z-0"></div>
+
+    <div class="relative z-10 w-full max-w-md bg-white/5 backdrop-blur-xl border border-indigo-500/30 rounded-2xl p-8 shadow-2xl">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center gap-2 text-2xl font-bold bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent mb-2">
+                🛡️ Scano<span class="text-white">Shield</span>
+            </div>
+            <h1 class="text-xl font-bold text-white">SOC Analyst Portal</h1>
+            <p class="text-xs text-gray-400 mt-1 font-mono">STRICTLY AUTHORIZED PERSONNEL ONLY</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-3 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs text-center font-mono">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Tab Toggle Buttons -->
+        <div class="flex border-b border-white/10 mb-6 font-mono text-xs">
+            <button id="loginTab" type="button" onclick="showTab('login')" class="w-1/2 py-2 text-center font-bold border-b-2 border-indigo-500 text-indigo-400">
+                🔑 LOGIN
+            </button>
+            <button id="registerTab" type="button" onclick="showTab('register')" class="w-1/2 py-2 text-center font-bold text-gray-500 border-b-2 border-transparent">
+                📝 REQUEST ACCESS
+            </button>
+        </div>
+
+        <!-- 1. LOGIN FORM -->
+        <form id="loginForm" method="POST" action="{% url 'login_page' %}" class="space-y-4">
+            {% csrf_token %}
+            <!-- Fixed field name to match views.py -->
+            <input type="hidden" name="form_type" value="login">
+            <div>
+                <label class="block text-xs font-mono text-gray-300 mb-1">Analyst Username</label>
+                <input type="text" name="username" required class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono" placeholder="SOC_Analyst">
+            </div>
+            <div>
+                <label class="block text-xs font-mono text-gray-300 mb-1">Passcode</label>
+                <input type="password" name="password" required class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono" placeholder="••••••••">
+            </div>
+            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-indigo-600/30">
+                Authenticate Session →
+            </button>
+        </form>
+
+        <!-- 2. REGISTRATION DETAILS FORM -->
+        <form id="registerForm" method="POST" action="{% url 'login_page' %}" class="space-y-3 hidden">
+            {% csrf_token %}
+            <!-- Fixed field name to match views.py -->
+            <input type="hidden" name="form_type" value="register">
+            <div>
+                <label class="block text-xs font-mono text-gray-300 mb-1">Full Name</label>
+                <input type="text" name="full_name" required class="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" placeholder="John Doe">
+            </div>
+            <div>
+                <label class="block text-xs font-mono text-gray-300 mb-1">Official Email</label>
+                <input type="email" name="email" required class="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono" placeholder="john@security.com">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs font-mono text-gray-300 mb-1">Company / Org</label>
+                    <input type="text" name="company" required class="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" placeholder="CyberSec Inc">
+                </div>
+                <div>
+                    <label class="block text-xs font-mono text-gray-300 mb-1">Designation</label>
+                    <input type="text" name="designation" required class="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500" placeholder="L2 Analyst">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-mono text-gray-300 mb-1">Phone Number</label>
+                <input type="text" name="phone" required class="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono" placeholder="+1234567890">
+            </div>
+
+            <p class="text-[10px] text-gray-400 font-mono bg-black/40 p-2 rounded border border-white/5">
+                ℹ️ Your details will be sent to the administrator. Credentials will be issued after verification.
+            </p>
+
+            <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-indigo-600/30">
+                Submit Details to Admin →
+            </button>
+        </form>
+
+        <div class="mt-6 text-center">
+            <a href="{% url 'home' %}" class="text-xs text-gray-500 hover:text-cyan-400 transition">← Back to Main Portal</a>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const loginTab = document.getElementById('loginTab');
+            const registerTab = document.getElementById('registerTab');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                loginTab.className = "w-1/2 py-2 text-center font-bold border-b-2 border-indigo-500 text-indigo-400";
+                registerTab.className = "w-1/2 py-2 text-center font-bold text-gray-500 border-b-2 border-transparent";
+            } else {
+                registerForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+                registerTab.className = "w-1/2 py-2 text-center font-bold border-b-2 border-indigo-500 text-indigo-400";
+                loginTab.className = "w-1/2 py-2 text-center font-bold text-gray-500 border-b-2 border-transparent";
+            }
+        }
+    </script>
+</body>
+</html>
