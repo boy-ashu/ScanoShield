@@ -5,11 +5,14 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import tempfile
 import json
+from .wifi_scan import scan_wifi_networks_advanced
 import ssl
+import subprocess
+import csv
 import uuid
 from django.contrib.auth import authenticate, login
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404 
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -20,6 +23,7 @@ from . import utils
 from .decorators import future_advance_feature_required
 
 # Modular Helpers Import
+from .wifi_scan import scan_wifi_networks_advanced
 from .file_scanner import scan_file, generate_report_text
 from .password_utils import ProfessionalPasswordToolkit
 from .fraud_dectector import (
@@ -104,7 +108,6 @@ def locator_page(request):
 def login_page(request):
     """
     Handles Analyst Login and Access Requests.
-    Removed auto-redirect for already authenticated users so the form is visible.
     """
     if request.method == "POST":
         form_type = request.POST.get('form_type')
@@ -117,10 +120,12 @@ def login_page(request):
             user = authenticate(request, username=u, password=p)
             if user is not None:
                 login(request, user)
-                profile = getattr(user, 'userprofile', None)
                 
-                # Verify admin clearance after authenticating
-                if user.is_staff or (profile and profile.is_authorized):
+                # Ensure a UserProfile object exists for this user
+                profile, created = UserProfile.objects.get_or_create(user=user)
+                
+                # Verify clearance (Staff member OR Authorized Professional)
+                if user.is_staff or profile.is_authorized:
                     return redirect('pro_home_page')
                 else:
                     messages.warning(request, "Access Denied: Your account is pending Admin clearance.")
@@ -151,6 +156,87 @@ def login_page(request):
 
     return render(request, 'scanner/login.html')
 
+def scan_wifi_networks():
+    """Scans for nearby Wi-Fi networks using native system commands."""
+    try:
+        raw_output = subprocess.check_output(
+            ["netsh", "wlan", "show", "networks", "mode=bssid"],
+            encoding="utf-8",
+            errors="ignore"
+        )
+
+        networks = []
+        current_net = {}
+
+        for line in raw_output.splitlines():
+            line = line.strip()
+
+            if line.startswith("SSID"):
+                if current_net and "ssid" in current_net:
+                    networks.append(current_net)
+                    current_net = {}
+                parts = line.split(":", 1)
+                ssid_val = parts[1].strip() if len(parts) > 1 else "Hidden Network"
+                current_net["ssid"] = ssid_val if ssid_val else "Hidden Network"
+
+            elif line.startswith("Authentication"):
+                current_net["auth"] = line.split(":", 1)[1].strip()
+
+            elif line.startswith("Encryption"):
+                current_net["encryption"] = line.split(":", 1)[1].strip()
+
+            elif line.startswith("Signal"):
+                current_net["signal"] = line.split(":", 1)[1].strip()
+
+            elif line.startswith("BSSID"):
+                if "bssid" not in current_net:
+                    current_net["bssid"] = line.split(":", 1)[1].strip()
+
+        if current_net and "ssid" in current_net:
+            networks.append(current_net)
+
+        return networks
+
+    except Exception as e:
+        return []
+
+def wifi_scanner_page(request):
+    """Renders the HTML interface."""
+    return render(request, 'scanner/wifi_scanner.html')
+
+def wifi_scanner_api(request):
+    """API endpoint providing scan, SIEM, and deep inspection JSON data."""
+    scan_results = scan_wifi_networks_advanced()
+    return JsonResponse(scan_results)
+
+def export_wifi_report_csv(request):
+    """Generates and downloads a CSV report of the latest Wi-Fi audit scan."""
+    data = scan_wifi_networks_advanced()
+    networks = data.get("networks", [])
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="wifi_security_report.csv"'
+
+    writer = csv.writer(response)
+    # CSV Header
+    writer.writerow(['SSID', 'BSSID (MAC)', 'Vendor', 'Signal', 'Channel', 'Band', 'Authentication', 'Encryption', 'Risk Level', 'Risk Reason'])
+
+    # Populate CSV rows
+    for net in networks:
+        writer.writerow([
+            net.get('ssid', ''),
+            net.get('bssid', ''),
+            net.get('vendor', ''),
+            net.get('signal', ''),
+            net.get('channel', ''),
+            net.get('band', ''),
+            net.get('auth', ''),
+            net.get('encryption', ''),
+            net.get('risk_score', ''),
+            net.get('risk_reason', '')
+        ])
+
+    return response
 
 @login_required(login_url='login_page')
 def pro_home_page(request):
@@ -158,9 +244,9 @@ def pro_home_page(request):
     Protected Pro Console.
     Requires user to be staff OR authorized by Admin.
     """
-    profile = getattr(request.user, 'userprofile', None)
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
     
-    if request.user.is_staff or (profile and profile.is_authorized):
+    if request.user.is_staff or profile.is_authorized:
         return render(request, 'scanner/pro_home.html')
     
     messages.warning(request, "Access Denied: Your account is pending Admin clearance.")
@@ -170,7 +256,7 @@ def pro_home_page(request):
 def admin_approval_panel(request):
     """
     Control panel for Admins to approve/reject access requests and assign Employee Credentials.
-    Renders 'scanner/admin_pannal.html'.
+    Renders 'scanner/admin_approval_panel.html'.
     """
     if request.method == "POST":
         action = request.POST.get('action')
@@ -185,6 +271,7 @@ def admin_approval_panel(request):
                 profile.emp_id = f"EMP-{uuid.uuid4().hex[:6].upper()}"
             
             profile.is_authorized = True
+            profile.role = 'professional'  # Assign professional role upon approval
             profile.save()
             
             # Ensure the user account itself is activated
@@ -209,12 +296,12 @@ def admin_approval_panel(request):
             UserSubmissionLog.objects.filter(id=log_id).delete()
             messages.info(request, "Submission log removed.")
 
-        return redirect('admin_logs')
+        return redirect('admin_approval_panel')
 
     # Data queries
-    pending_profiles = UserProfile.objects.filter(is_authorized=False, role='professional')
+    pending_profiles = UserProfile.objects.filter(is_authorized=False)
     approved_profiles = UserProfile.objects.filter(is_authorized=True)
-    access_logs = UserSubmissionLog.objects.all().order_by('-created_at')[:20]
+    access_logs = UserSubmissionLog.objects.all().order_by('-submitted_at')[:20]
 
     context = {
         'pending_profiles': pending_profiles,
@@ -222,8 +309,7 @@ def admin_approval_panel(request):
         'access_logs': access_logs,
     }
     
-    # Renders your updated template name: admin_pannal.html
-    return render(request, 'scanner/admin_pannal.html', context)
+    return render(request, 'scanner/admin_approval_panel.html', context)
 
 # ========================================================
 # 1. CYBER NEWS FETCHING LOGIC
@@ -289,10 +375,6 @@ def fetch_cyber_news():
 
 @csrf_exempt
 def lookup_api(request):
-    """
-    API Endpoint for Geolocation and Metadata Analysis.
-    Supports POST with JSON or Form Data containing 'query' and optional 'type'.
-    """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
@@ -312,7 +394,7 @@ def lookup_api(request):
         result = {}
 
         if input_type == "ip":
-            result = utils.lookup_ip(query)
+            result = utils.lookup_ip(query) # <--- Calls the updated logic
         elif input_type == "phone":
             result = utils.lookup_phone(query)
         elif input_type == "email":
@@ -324,9 +406,7 @@ def lookup_api(request):
         else:
             return JsonResponse({"error": "Unsupported or unrecognized input format."}, status=400)
 
-        # Log search query
         SearchLog.objects.create(query=query, input_type=input_type)
-
         return JsonResponse(result)
 
     except Exception as e:
@@ -502,33 +582,3 @@ def register_professional(request):
     return render(request, 'scanner/professional_portal.html', {'profile': profile})
 
 
-@staff_member_required
-def admin_approval_panel(request):
-    """केवल एडमिन/स्टाफ के लिए: प्रोफेशन्स को Approve या Reject करने का कंट्रोल सेंटर"""
-    pending_profiles = UserProfile.objects.filter(role='professional', is_authorized=False)
-    approved_profiles = UserProfile.objects.filter(role='professional', is_authorized=True)
-
-    if request.method == "POST":
-        action = request.POST.get('action')
-        profile_id = request.POST.get('profile_id')
-        profile = get_object_or_404(UserProfile, id=profile_id)
-
-        if action == 'approve':
-            if not profile.emp_id:
-                profile.emp_id = f"EMP-{uuid.uuid4().hex[:6].upper()}"
-            profile.is_authorized = True
-            profile.save()
-            messages.success(request, f"{profile.user.username} को Approve कर दिया गया है (Emp ID: {profile.emp_id})।")
-
-        elif action == 'reject':
-            profile.role = 'normal'  # Reset role back to normal
-            profile.save()
-            messages.warning(request, f"{profile.user.username} की रिक्वेस्ट Reject कर दी गई है।")
-
-        return redirect('admin_approval_panel')
-
-    context = {
-        'pending_profiles': pending_profiles,
-        'approved_profiles': approved_profiles,
-    }
-    return render(request, 'scanner/admin_approval_panel.html', context)

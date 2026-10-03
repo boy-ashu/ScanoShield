@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Recon Toolkit{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'recon_app/css/style.css' %}">
+</head>
+<body>
+    <header>
+        <h1>Recon Toolkit</h1>
+        <nav>
+            <a href="{% url 'index' %}">Home</a>
+            <a href="{% url 'port_scan' %}">Port Scan</a>
+            <a href="{% url 'dns_whois' %}">DNS & WHOIS</a>
+            <a href="{% url 'subdomain_lookup' %}">Subdomain Finder</a>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

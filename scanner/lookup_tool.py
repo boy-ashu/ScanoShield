@@ -12,7 +12,7 @@ from phonenumbers import geocoder, carrier
 # -------------------------------------------------------------------
 
 def analyze_ip(ip_str):
-    """Queries a free public API for IP geolocation details."""
+    """Queries a public API for IP geolocation details."""
     ip_str = ip_str.strip()
     url = f"https://ipapi.co/{ip_str}/json/" if ip_str else "https://ipapi.co/json/"
     
@@ -33,7 +33,7 @@ def analyze_ip(ip_str):
                 f"Postal Code : {data.get('postal')}",
                 f"ISP / Org   : {data.get('org')}",
                 f"Coordinates : {data.get('latitude')}, {data.get('longitude')}",
-                "\n* Note: IP locations represent internet routing points, not an exact physical address."
+                "\n* Note: IP locations represent internet routing points, not exact physical addresses."
             ]
             return "\n".join(output)
     except Exception as e:

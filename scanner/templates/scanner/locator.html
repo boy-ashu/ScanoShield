@@ -4,63 +4,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ScanoShield | Metadata & Geolocation Lookup</title>
+    <title>ScanoShield | Metadata & Geolocation Intelligence</title>
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', sans-serif; }
-        body { background: #0a0a0a; color: #fff; overflow-x: hidden; }
-        
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        body { background: #07090e; color: #fff; overflow-x: hidden; }
+
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
+        .fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
     </style>
 </head>
-<body class="bg-black min-h-screen">
+<body class="bg-[#07090e] min-h-screen flex flex-col justify-between">
+
+    <!-- Background Grid Line Effect -->
+    <div class="fixed inset-0 pointer-events-none bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] z-0"></div>
 
     <!-- Navigation Bar -->
-    <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/40 border-b border-white/10">
+    <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/50 border-b border-indigo-500/20">
         <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="/" class="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                Scano<span class="text-white">Shield</span>
+            <a href="{% url 'home' %}" class="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2">
+                🛡️ Scano<span class="text-white">Shield</span>
+                <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 rounded uppercase">PRO SUITE</span>
             </a>
-            <div class="flex gap-6 items-center">
-                <a href="/" class="text-gray-300 hover:text-cyan-400 text-sm transition">← Back to Home</a>
+            <div class="flex gap-6 items-center text-sm">
+                <a href="{% url 'pro_home_page' %}" class="text-gray-400 hover:text-cyan-400 transition flex items-center gap-1 font-mono text-xs">
+                    ← Back to Console
+                </a>
+                <div class="flex items-center gap-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl px-3 py-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs text-gray-300 font-medium">Analyst: <span class="text-white font-bold font-mono">{{ user.username|default:"SOC_Analyst" }}</span></span>
+                </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content Container -->
-    <main class="pt-28 pb-16 px-6 max-w-5xl mx-auto relative z-10">
+    <main class="pt-28 pb-16 px-6 max-w-5xl mx-auto relative z-10 flex-grow w-full">
         
-        <!-- Header Section -->
+        <!-- Header Banner -->
         <div class="text-center mb-10 fade-in-up">
-            <div class="inline-block px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold mb-4">
-                🌐 Network Intelligence & Geolocation
+            <div class="inline-flex items-center gap-2 px-3 me-2 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-mono mb-4">
+                🌐 GEOLOCATION & NETWORK METADATA SUITE
             </div>
-            <h1 class="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-white via-cyan-200 to-blue-400 bg-clip-text text-transparent mb-4">
+            <h1 class="text-3xl md:text-5xl font-extrabold text-white mb-3">
                 Metadata & Geolocation Lookup
             </h1>
-            <p class="text-gray-400 text-base max-w-2xl mx-auto">
-                Instantly inspect public metadata for IP addresses, phone carriers, email domain status, and resolved hostnames.
+            <p class="text-gray-400 text-sm max-w-2xl mx-auto">
+                Execute intelligence queries to inspect IP routing, cellular carrier parameters, email server reachability, and domain record correlation.
             </p>
         </div>
 
-        <!-- Search Form -->
-        <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl mb-10">
+        <!-- Search Form Card -->
+        <div class="bg-white/5 backdrop-blur-xl border border-indigo-500/30 rounded-2xl p-6 md:p-8 shadow-2xl mb-8">
             <form id="lookup-form" class="space-y-6">
                 {% csrf_token %}
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <!-- Target Type Selector -->
                     <div class="md:col-span-1">
-                        <label for="query_type" class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                        <label for="query_type" class="block text-xs font-mono font-semibold text-indigo-300 uppercase tracking-wider mb-2">
                             Analysis Type
                         </label>
-                        <select id="query_type" name="type" class="w-full bg-black/60 border border-white/20 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-500 transition text-sm">
-                            <option value="">Auto Detect</option>
+                        <select id="query_type" name="type" class="w-full bg-black/60 border border-indigo-500/30 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-400 transition text-sm font-mono">
+                            <option value="">⚡ Auto Detect</option>
                             <option value="ip">IP Address</option>
                             <option value="phone">Phone Number</option>
                             <option value="email">Email Address</option>
@@ -70,17 +81,17 @@
 
                     <!-- Input Field -->
                     <div class="md:col-span-3">
-                        <label for="query_val" class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                        <label for="query_val" class="block text-xs font-mono font-semibold text-indigo-300 uppercase tracking-wider mb-2">
                             Target Value
                         </label>
                         <div class="relative flex flex-col md:flex-row gap-3">
                             <input type="text" id="query_val" name="query" required
                                 placeholder="e.g., 8.8.8.8, +14155552671, user@domain.com, google.com" 
-                                class="w-full bg-black/60 border border-white/20 text-white placeholder-gray-500 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-500 transition text-sm">
+                                class="w-full bg-black/60 border border-indigo-500/30 text-white placeholder-gray-500 rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-400 transition text-sm font-mono">
                             
                             <button type="submit" id="submit-btn" 
-                                class="px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold rounded-xl transition transform active:scale-95 shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 whitespace-nowrap text-sm">
-                                <span>Analyze</span>
+                                class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition transform active:scale-95 shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 whitespace-nowrap text-sm">
+                                <span>Execute Lookup</span>
                                 <svg id="btn-spinner" class="animate-spin h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -92,32 +103,32 @@
             </form>
         </div>
 
-        <!-- Error Card -->
-        <div id="error-card" class="hidden bg-red-500/10 border border-red-500/30 rounded-2xl p-5 mb-8 text-red-400 text-sm">
+        <!-- Error Container -->
+        <div id="error-card" class="hidden bg-red-500/10 border border-red-500/30 rounded-2xl p-5 mb-8 text-red-400 text-sm font-mono fade-in-up">
             <div class="flex items-center gap-3">
                 <span class="text-xl">⚠️</span>
                 <p id="error-message"></p>
             </div>
         </div>
 
-        <!-- Results Card -->
-        <div id="result-card" class="hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl">
+        <!-- Intelligence Output Box -->
+        <div id="result-card" class="hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl fade-in-up">
             <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
-                <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                    <span class="text-cyan-400">📊</span> Intelligence Output
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span class="text-indigo-400">📊</span> Intelligence Output Result
                 </h3>
-                <span id="result-type-badge" class="px-3 py-1 bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold rounded-full uppercase tracking-wider">
-                    Result
+                <span id="result-type-badge" class="px-3 py-1 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-mono font-bold rounded-full uppercase tracking-wider">
+                    RESULT
                 </span>
             </div>
 
-            <!-- Dynamic Fields Container -->
-            <div id="result-details" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Dynamically populated via JS -->
+            <!-- Dynamic Fields Output Grid -->
+            <div id="result-details" class="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
+                <!-- Dynamically Populated via JavaScript -->
             </div>
 
-            <!-- Disclaimer / Notes -->
-            <div id="result-note" class="mt-6 pt-4 border-t border-white/10 text-xs text-gray-400 flex items-start gap-2">
+            <!-- Additional Notes / Disclaimer -->
+            <div id="result-note" class="mt-6 pt-4 border-t border-white/10 text-xs text-gray-400 flex items-start gap-2 font-mono">
                 <span>ℹ️</span>
                 <p id="note-text"></p>
             </div>
@@ -125,7 +136,12 @@
 
     </main>
 
-    <!-- JavaScript API Handler -->
+    <!-- Footer -->
+    <footer class="border-t border-white/10 py-6 text-center text-xs text-gray-500 font-mono relative z-10">
+        ScanoShield Security Platform • Threat Intelligence & Metadata Diagnostics
+    </footer>
+
+    <!-- JS API Request Handler -->
     <script>
     document.getElementById('lookup-form').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -143,7 +159,7 @@
 
         if (!queryInput) return;
 
-        // Reset UI
+        // Reset UI Elements
         errorCard.classList.add('hidden');
         resultCard.classList.add('hidden');
         submitBtn.disabled = true;
@@ -169,11 +185,11 @@
             const data = await response.json();
 
             if (!response.ok || data.error) {
-                document.getElementById('error-message').textContent = data.error || 'Failed to analyze the query.';
+                document.getElementById('error-message').textContent = data.error || 'Failed to analyze the target query.';
                 errorCard.classList.remove('hidden');
             } else {
                 resultDetails.innerHTML = '';
-                typeBadge.textContent = data.type || 'Result';
+                typeBadge.textContent = data.type || 'RESULT';
                 
                 if (data.note) {
                     noteText.textContent = data.note;
@@ -182,28 +198,28 @@
                     document.getElementById('result-note').classList.add('hidden');
                 }
 
-                // Render main payload key-values
+                // Render Primary Key-Value Attributes
                 for (const [key, value] of Object.entries(data)) {
                     if (key === 'type' || key === 'note' || typeof value === 'object') continue;
 
                     const fieldBox = document.createElement('div');
-                    fieldBox.className = 'bg-black/40 border border-white/5 rounded-xl p-4';
+                    fieldBox.className = 'bg-black/40 border border-indigo-500/20 rounded-xl p-4';
                     fieldBox.innerHTML = `
-                        <div class="text-xs text-gray-400 capitalize mb-1 font-medium">${key.replace('_', ' ')}</div>
-                        <div class="text-sm font-semibold text-white break-words">${value || 'N/A'}</div>
+                        <div class="text-[11px] text-gray-400 uppercase tracking-wider mb-1">${key.replace(/_/g, ' ')}</div>
+                        <div class="text-sm font-bold text-white break-words">${value || 'N/A'}</div>
                     `;
                     resultDetails.appendChild(fieldBox);
                 }
 
-                // Render nested IP details if available (e.g. for domains)
+                // Render Nested IP Details (e.g. Domain Resolution Data)
                 if (data.ip_data && typeof data.ip_data === 'object') {
                     for (const [ipKey, ipValue] of Object.entries(data.ip_data)) {
                         if (ipKey === 'type' || ipKey === 'note' || typeof ipValue === 'object') continue;
                         const fieldBox = document.createElement('div');
-                        fieldBox.className = 'bg-cyan-950/20 border border-cyan-500/20 rounded-xl p-4';
+                        fieldBox.className = 'bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-4';
                         fieldBox.innerHTML = `
-                            <div class="text-xs text-cyan-400 capitalize mb-1 font-medium">IP ${ipKey.replace('_', ' ')}</div>
-                            <div class="text-sm font-semibold text-white break-words">${ipValue || 'N/A'}</div>
+                            <div class="text-[11px] text-indigo-400 uppercase tracking-wider mb-1">RESOLVED IP ${ipKey.replace(/_/g, ' ')}</div>
+                            <div class="text-sm font-bold text-white break-words">${ipValue || 'N/A'}</div>
                         `;
                         resultDetails.appendChild(fieldBox);
                     }
@@ -212,7 +228,7 @@
                 resultCard.classList.remove('hidden');
             }
         } catch (err) {
-            document.getElementById('error-message').textContent = 'Network or server error occurred. Please try again.';
+            document.getElementById('error-message').textContent = 'Network or server error occurred. Please verify backend execution.';
             errorCard.classList.remove('hidden');
         } finally {
             submitBtn.disabled = false;

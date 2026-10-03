@@ -25,26 +25,24 @@
     <!-- Background Grid Line Effect -->
     <div class="fixed inset-0 pointer-events-none bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] z-0"></div>
 
-  <!-- Navigation Bar -->
-<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/50 border-b border-indigo-500/20">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        <!-- Logo connects back home -->
-        <a href="{% url 'home' %}" class="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2">
-            🛡️ Scano<span class="text-white">Shield</span>
-            <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 rounded uppercase">PRO SUITE</span>
-        </a>
-        <div class="flex gap-6 items-center text-sm">
-            <!-- Back to main portal link -->
-            <a href="{% url 'home' %}" class="text-gray-400 hover:text-cyan-400 transition flex items-center gap-1">
-                ← Back to Main Portal
+    <!-- Navigation Bar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-black/50 border-b border-indigo-500/20">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="{% url 'home' %}" class="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 bg-clip-text text-transparent flex items-center gap-2">
+                🛡️ Scano<span class="text-white">Shield</span>
+                <span class="px-2 py-0.5 text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 rounded uppercase">PRO SUITE</span>
             </a>
-            <div class="flex items-center gap-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl px-3 py-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span class="text-xs text-gray-300 font-medium">Analyst: <span class="text-white font-bold">{{ user.username|default:"SOC_Analyst" }}</span></span>
+            <div class="flex gap-6 items-center text-sm">
+                <a href="{% url 'home' %}" class="text-gray-400 hover:text-cyan-400 transition flex items-center gap-1">
+                    ← Back to Main Portal
+                </a>
+                <div class="flex items-center gap-3 bg-indigo-950/40 border border-indigo-500/30 rounded-xl px-3 py-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs text-gray-300 font-medium">Analyst: <span class="text-white font-bold">{{ user.username|default:"SOC_Analyst" }}</span></span>
+                </div>
             </div>
         </div>
-    </div>
-</nav>
+    </nav>
 
     <!-- Main Content Container -->
     <main class="pt-28 pb-16 px-6 max-w-7xl mx-auto relative z-10 flex-grow w-full">
@@ -59,7 +57,7 @@
                     Cybersecurity Professional Console
                 </h1>
                 <p class="text-gray-400 text-sm mt-1">
-                    Advanced threat intelligence, automated IOC correlation, API key orchestration, and SOC diagnostics.
+                    Advanced threat intelligence, automated IOC correlation, wireless network diagnostics, and SOC monitoring.
                 </p>
             </div>
             <div class="flex gap-3">
@@ -104,22 +102,95 @@
         </div>
 
         <!-- Advanced Operations Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
             
-            <!-- Tool 1: Metadata & Geolocation -->
-            <div class="bg-white/5 backdrop-blur-xl border border-indigo-500/20 rounded-2xl p-6 hover:border-indigo-500/50 transition">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 bg-indigo-500/20 border border-indigo-500/30 rounded-xl flex items-center justify-center text-2xl text-indigo-400">🌐</div>
-                    <span class="text-[10px] bg-indigo-500/20 text-indigo-300 font-mono px-2 py-0.5 rounded border border-indigo-500/30">GEOLOCATION</span>
+            <!-- Tool 1: Wi-Fi Scanner -->
+      <!-- Tool 1: Wi-Fi Scanner (Updated with Enhanced Telemetry Details) -->
+<div class="bg-white/5 backdrop-blur-xl border border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500/60 transition flex flex-col justify-between">
+    <div>
+        <div class="flex justify-between items-start mb-4">
+            <div class="w-12 h-12 bg-emerald-500/20 border border-emerald-500/30 rounded-xl flex items-center justify-center text-2xl text-emerald-400">📡</div>
+            <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.5 rounded border border-emerald-500/30">WIRELESS</span>
+        </div>
+        <h3 class="text-lg font-bold text-white mb-2">Wi-Fi Network Auditor</h3>
+        <p class="text-gray-400 text-xs leading-relaxed mb-4">
+            Scan nearby 802.11 access points, signal strength, auth protocols, and BSSIDs[cite: 3].
+        </p>
+
+        <!-- New Feature Highlights -->
+        <div class="grid grid-cols-3 gap-2 py-2 px-3 bg-black/40 border border-emerald-500/20 rounded-xl mb-6 text-[11px] font-mono">
+            <div class="text-center border-r border-white/10">
+                <span class="text-gray-400 block text-[9px] uppercase">Clients</span>
+                <span class="text-amber-400 font-bold">ARP Cache</span>
+            </div>
+            <div class="text-center border-r border-white/10">
+                <span class="text-gray-400 block text-[9px] uppercase">Gateway</span>
+                <span class="text-indigo-400 font-bold">IP Route</span>
+            </div>
+            <div class="text-center">
+                <span class="text-gray-400 block text-[9px] uppercase">Speed</span>
+                <span class="text-emerald-400 font-bold">Rx / Tx</span>
+            </div>
+        </div>
+    </div>
+
+    <a href="{% url 'wifi_scanner_page' %}" class="w-full py-2.5 bg-emerald-600/30 hover:bg-emerald-600 border border-emerald-500/50 text-emerald-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+        <span>Launch Wi-Fi Auditor Dashboard</span> →[cite: 3]
+    </a>
+</div>    
+
+            <!-- Tool 2: Metadata & Geolocation -->
+            <div class="bg-white/5 backdrop-blur-xl border border-indigo-500/20 rounded-2xl p-6 hover:border-indigo-500/50 transition flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-12 h-12 bg-indigo-500/20 border border-indigo-500/30 rounded-xl flex items-center justify-center text-2xl text-indigo-400">🌐</div>
+                        <span class="text-[10px] bg-indigo-500/20 text-indigo-300 font-mono px-2 py-0.5 rounded border border-indigo-500/30">GEOLOCATION</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Network & Geo Lookup</h3>
+                    <p class="text-gray-400 text-xs leading-relaxed mb-6">
+                        Inspect IP addresses, domain metadata, phone numbers, and active MX record status.
+                    </p>
                 </div>
-                <h3 class="text-xl font-bold text-white mb-2">Network & Geo Lookup</h3>
-                <p class="text-gray-400 text-sm leading-relaxed mb-6">
-                    Inspect IP addresses, domain metadata, phone numbers, and active MX record status.
-                </p>
                 <a href="{% url 'locator_page' %}" class="w-full py-2.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/50 text-indigo-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
                     <span>Execute Lookup</span> →
                 </a>
             </div>
+
+            <!-- Tool 3: Dynamic Sandbox -->
+            <div class="bg-white/5 backdrop-blur-xl border border-indigo-500/20 rounded-2xl p-6 hover:border-indigo-500/50 transition flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-12 h-12 bg-purple-500/20 border border-purple-500/30 rounded-xl flex items-center justify-center text-2xl text-purple-400">🧪</div>
+                        <span class="text-[10px] bg-purple-500/20 text-purple-300 font-mono px-2 py-0.5 rounded border border-purple-500/30">SANDBOX</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Deep File Analysis</h3>
+                    <p class="text-gray-400 text-xs leading-relaxed mb-6">
+                        Analyze binary entropy, inspect byte structures, magic headers, and embedded scripts.
+                    </p>
+                </div>
+                <a href="/file-scanner/" class="w-full py-2.5 bg-purple-600/30 hover:bg-purple-600 border border-purple-500/50 text-purple-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                    <span>Launch File Sandbox</span> →
+                </a>
+            </div>
+
+            <!-- Tool 4: Credential Audit -->
+            <div class="bg-white/5 backdrop-blur-xl border border-indigo-500/20 rounded-2xl p-6 hover:border-indigo-500/50 transition flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-12 h-12 bg-amber-500/20 border border-amber-500/30 rounded-xl flex items-center justify-center text-2xl text-amber-400">🔓</div>
+                        <span class="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2 py-0.5 rounded border border-amber-500/30">BREACH_LOGS</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Credential Audit Engine</h3>
+                    <p class="text-gray-400 text-xs leading-relaxed mb-6">
+                        Audit high-risk enterprise credentials and hash entropy via k-Anonymity breach feeds.
+                    </p>
+                </div>
+                <a href="/password/" class="w-full py-2.5 bg-amber-600/30 hover:bg-amber-600 border border-amber-500/50 text-amber-200 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                    <span>Audit Credentials</span> →
+                </a>
+            </div>
+
+        </div>
 
         <!-- Recent Audit Activity Log Table -->
         <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
@@ -162,11 +233,7 @@
         </div>
 
     </main>
-
-    <!-- Footer -->
-    <footer class="border-t border-white/10 bg-black/60 relative z-10 py-6 text-center text-xs text-gray-500">
-        <p>ScanoShield Professional SOC Suite | Strictly Authorized Operations Only</p>
-    </footer>
-
+</div>
+</div> 
 </body>
 </html>

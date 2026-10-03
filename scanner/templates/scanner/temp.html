@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AirGuard - Wi-Fi Security & WIDS Dashboard</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes pulse-red {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-red { animation: pulse-red 1.5s infinite; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
+
+  <!-- Top Navigation -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur px-6 py-4 flex flex-wrap justify-between items-center sticky top-0 z-50 gap-4">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg border border-indigo-500/30">
+        <i data-lucide="wifi"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-wide">AirGuard <span class="text-xs font-mono text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded border border-indigo-800">v2.0 Security Suite</span></h1>
+        <p class="text-xs text-slate-400">Wi-Fi Security Scanner & Rogue AP Detection System</p>
+      </div>
+    </div>
+
+    <!-- Interface Controls & Report Button -->
+    <div class="flex items-center gap-3">
+      <div class="hidden lg:flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-slate-300 font-mono">Interface: <strong class="text-emerald-400">wlan0mon</strong> (Monitor)</span>
+      </div>
+
+      <button id="scanBtn" onclick="toggleScan()" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-lg shadow-indigo-600/20">
+        <i data-lucide="radar" id="scanIcon" class="w-4 h-4 animate-spin"></i>
+        <span id="scanBtnText">Stop Scanning</span>
+      </button>
+
+      <button onclick="generateSecurityReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-3 py-2 rounded-lg flex items-center gap-2 transition">
+        <i data-lucide="file-text" class="w-4 h-4"></i> Security Report
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="p-6 max-w-[1600px] mx-auto space-y-6">
+
+    <!-- KPI Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Networks</p>
+          <h3 class="text-3xl font-bold mt-1 text-slate-100" id="apCount">5</h3>
+          <p class="text-xs text-emerald-400 mt-1 flex items-center gap-1"><i data-lucide="arrow-up-right" class="w-3 h-3"></i> Live updating</p>
+        </div>
+        <div class="p-3 bg-blue-500/10 text-blue-400 rounded-lg"><i data-lucide="wifi" class="w-6 h-6"></i></div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Duplicate SSIDs</p>
+          <h3 class="text-3xl font-bold mt-1 text-amber-400" id="duplicateSsidCount">1</h3>
+          <p class="text-xs text-amber-400/80 mt-1">Multi-BSSID SSIDs</p>
+        </div>
+        <div class="p-3 bg-amber-500/10 text-amber-400 rounded-lg"><i data-lucide="copy" class="w-6 h-6"></i></div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Rogue / Evil-Twin</p>
+          <h3 class="text-3xl font-bold mt-1 text-rose-500" id="rogueApCount">1</h3>
+          <p class="text-xs text-rose-400 mt-1">Suspicious AP Warning</p>
+        </div>
+        <div class="p-3 bg-rose-500/10 text-rose-400 rounded-lg border border-rose-500/20"><i data-lucide="shield-alert" class="w-6 h-6"></i></div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Open / Weak Sec</p>
+          <h3 class="text-3xl font-bold mt-1 text-amber-400" id="weakSecCount">2</h3>
+          <p class="text-xs text-amber-400/80 mt-1">Open / WEP Enabled</p>
+        </div>
+        <div class="p-3 bg-amber-500/10 text-amber-400 rounded-lg"><i data-lucide="lock-open" class="w-6 h-6"></i></div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between shadow-sm">
+        <div>
+          <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Phone Hotspots</p>
+          <h3 class="text-3xl font-bold mt-1 text-slate-100" id="phoneCount">1</h3>
+          <p class="text-xs text-slate-400 mt-1">Mobile Access Points</p>
+        </div>
+        <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-lg"><i data-lucide="smartphone" class="w-6 h-6"></i></div>
+      </div>
+    </div>
+
+    <!-- Analytics Row: Channel Congestion & Duplicate SSIDs / Evil Twin Warnings -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Channel Congestion Analysis -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-400"></i>
+            <h2 class="font-semibold text-slate-200">Channel Congestion</h2>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">AP Count per Channel</span>
+        </div>
+        <div id="channelCongestionContainer" class="grid grid-cols-6 gap-2">
+          <!-- Dynamically Generated Bars -->
+        </div>
+      </div>
+
+      <!-- Rogue AP & Duplicate SSID Warning Monitor -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="radio" class="w-5 h-5 text-rose-400"></i>
+            <h2 class="font-semibold text-slate-200">Rogue AP & Duplicate SSID Warnings</h2>
+          </div>
+          <span class="text-xs bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-mono">Investigation Advised</span>
+        </div>
+        <div id="rogueWarningList" class="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+          <!-- Dynamically populated warnings -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main Discovery Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Network List Grid -->
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/50">
+          <div class="flex items-center gap-2">
+            <i data-lucide="list" class="w-5 h-5 text-indigo-400"></i>
+            <h2 class="font-semibold text-slate-200">Discovered Wi-Fi Networks</h2>
+          </div>
+          
+          <div class="flex items-center gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <button onclick="filterCategory('all')" id="btn-all" class="filter-btn px-3 py-1 rounded-md text-xs font-medium transition bg-indigo-600 text-white">All</button>
+            <button onclick="filterCategory('router')" id="btn-router" class="filter-btn px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white transition">Routers / APs</button>
+            <button onclick="filterCategory('phone')" id="btn-phone" class="filter-btn px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white transition">Phones</button>
+            <button onclick="filterCategory('unsecured')" id="btn-unsecured" class="filter-btn px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white transition">Unsecured / Weak</button>
+          </div>
+        </div>
+
+        <div id="wifiList" class="p-4 space-y-3 max-h-[500px] overflow-y-auto">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Real-Time Intrusion Feed -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+          <div class="flex items-center gap-2">
+            <i data-lucide="shield-alert" class="w-5 h-5 text-rose-500"></i>
+            <h2 class="font-semibold text-slate-200">WIDS Real-Time Threat Feed</h2>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse-red"></span>
+        </div>
+
+        <div class="p-4 space-y-3 flex-1 overflow-y-auto max-h-[500px]" id="alertFeed">
+          <div class="p-3 bg-rose-950/30 border border-rose-500/30 rounded-lg space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-rose-400 flex items-center gap-1">
+                <i data-lucide="zap" class="w-3.5 h-3.5"></i> DE-AUTH FLOOD DETECTED
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">20:58:12</span>
+            </div>
+            <p class="text-xs text-slate-300">Burst of 120+ disassociation frames targeted at client <span class="font-mono text-rose-300">88:66:55:11:22:33</span>.</p>
+          </div>
+
+          <div class="p-3 bg-amber-950/30 border border-amber-500/30 rounded-lg space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-400 flex items-center gap-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> SUSPECTED EVIL TWIN
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">20:55:40</span>
+            </div>
+            <p class="text-xs text-slate-300">SSID <span class="font-mono text-amber-200">"CyberLab_Corp"</span> detected with mismatched BSSID and channel configuration.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Threat Alerts & Unsecured Devices Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Threat Alerts Breakdown -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+          <div class="flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-500"></i>
+            <h2 class="font-semibold text-slate-200">Active Threat Alerts</h2>
+          </div>
+          <span class="text-xs font-mono bg-rose-950 text-rose-400 border border-rose-800 px-2 py-0.5 rounded">Active Alerts</span>
+        </div>
+
+        <div class="p-4 space-y-3 overflow-y-auto max-h-[350px]">
+          <div class="p-4 bg-slate-950 border border-rose-500/30 rounded-xl space-y-2 hover:border-rose-500/60 transition">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-rose-400 flex items-center gap-1">
+                <i data-lucide="shield-alert" class="w-4 h-4"></i> De-Authentication Attack
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">20:58:12</span>
+            </div>
+            <p class="text-xs text-slate-300">Target client disconnected repeatedly using spoofed management frames.</p>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400">
+              <div><strong class="text-slate-500">Target IP:</strong> <span class="text-slate-200">192.168.1.105</span></div>
+              <div><strong class="text-slate-500">Target MAC:</strong> <span class="text-slate-200">88:66:55:11:22:33</span></div>
+            </div>
+          </div>
+
+          <div class="p-4 bg-slate-950 border border-amber-500/30 rounded-xl space-y-2 hover:border-amber-500/60 transition">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-400 flex items-center gap-1">
+                <i data-lucide="radio" class="w-4 h-4"></i> Evil Twin Access Point Warning
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">20:55:40</span>
+            </div>
+            <p class="text-xs text-slate-300">Possible rogue AP cloning target SSID to intercept encrypted traffic.</p>
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400">
+              <div><strong class="text-slate-500">Rogue IP:</strong> <span class="text-slate-200">10.0.0.1</span></div>
+              <div><strong class="text-slate-500">Rogue BSSID:</strong> <span class="text-slate-200">DE:AD:BE:EF:69:00</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unsecured Networks & Devices -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+          <div class="flex items-center gap-2">
+            <i data-lucide="lock-open" class="w-5 h-5 text-amber-400"></i>
+            <h2 class="font-semibold text-slate-200">Unsecured Networks & Devices</h2>
+          </div>
+          <span class="text-xs font-mono bg-amber-950 text-amber-400 border border-amber-800 px-2 py-0.5 rounded">Unsecured APs</span>
+        </div>
+
+        <div id="unsecuredList" class="p-4 space-y-3 overflow-y-auto max-h-[350px]">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Scan History Comparison Tool -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="history" class="w-5 h-5 text-indigo-400"></i>
+          <h2 class="font-semibold text-slate-200">Scan History & Temporal Comparison</h2>
+        </div>
+        <button onclick="saveScanSnapshot()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+          <i data-lucide="save" class="w-3.5 h-3.5"></i> Save Current Snapshot
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Select Historical Snapshot to Compare:</label>
+          <select id="historySelect" onchange="compareScanHistory()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+        <div id="historyDiffOutput" class="p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-300 font-mono">
+          Select a snapshot to see network changes over time.
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Network Details Modal -->
+  <div id="detailsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-2xl w-full p-6 space-y-6 shadow-2xl relative">
+      <div class="flex justify-between items-start border-b border-slate-800 pb-4">
+        <div class="flex items-center gap-3">
+          <div id="modalIconContainer" class="p-3 rounded-lg"></div>
+          <div>
+            <h3 id="modalSsid" class="text-lg font-bold text-slate-100">---</h3>
+            <p id="modalCategory" class="text-xs text-slate-400 font-medium">---</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs font-mono">
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 block text-[10px] uppercase font-sans font-bold">IP Address</span>
+          <span id="modalIp" class="text-amber-400 font-semibold">---</span>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 block text-[10px] uppercase font-sans font-bold">BSSID (MAC)</span>
+          <span id="modalBssid" class="text-slate-200 font-semibold">---</span>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 block text-[10px] uppercase font-sans font-bold">Vendor</span>
+          <span id="modalVendor" class="text-slate-200 font-semibold">---</span>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 block text-[10px] uppercase font-sans font-bold">Signal Strength</span>
+          <span id="modalSignal" class="text-slate-200 font-semibold">---</span>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 block text-[10px] uppercase font-sans font-bold">Channel</span>
+          <span id="modalChannel" class="text-slate-200 font-semibold">---</span>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-500 block text-[10px] uppercase font-sans font-bold">Security / Encryption</span>
+          <span id="modalSecurity" class="text-slate-200 font-semibold">---</span>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="closeModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-700">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Report Modal -->
+  <div id="reportModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-3xl w-full p-6 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-start border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-6 h-6 text-emerald-400"></i> AirGuard Security Audit Report
+          </h3>
+          <p class="text-xs text-slate-400">Generated on: <span id="reportDate" class="font-mono">---</span></p>
+        </div>
+        <button onclick="closeReportModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="reportContent" class="space-y-4 text-xs text-slate-300">
+        <!-- Generated Dynamically -->
+      </div>
+
+      <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+        <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-2">
+          <i data-lucide="printer" class="w-4 h-4"></i> Print Report
+        </button>
+        <button onclick="closeReportModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg border border-slate-700">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Live Wi-Fi Dataset State
+    let wifiData = [];
+    let scanHistory = [];
+    let currentFilter = 'all';
+    let isScanning = true;
+    let scanInterval = null;
+
+    // Helper: Convert Signal to Quality Badge
+    function getSignalBadge(dbm) {
+      if (dbm >= -60) {
+        return `<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Strong (${dbm} dBm)</span>`;
+      } else if (dbm >= -75) {
+        return `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30">Medium (${dbm} dBm)</span>`;
+      } else {
+        return `<span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/30">Weak (${dbm} dBm)</span>`;
+      }
+    }
+
+    // Helper: Convert Security Status to Badges
+    function getSecurityBadges(item) {
+      let badges = '';
+      if (item.security === 'Open' || item.security === 'OPEN') {
+        badges += `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-400 border border-rose-800">OPEN (Unencrypted)</span>`;
+      } else if (item.security === 'WEP') {
+        badges += `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800">WEP (Weak Security)</span>`;
+      } else {
+        badges += `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">${item.security}</span>`;
+      }
+      return badges;
+    }
+
+    // Dynamic API Data Fetcher
+    async function fetchWifiScanData() {
+      if (!isScanning) return;
+
+      try {
+        const response = await fetch('/api/wifi-scan/');
+        if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+        
+        const data = await response.json();
+
+        if (data.status === "success") {
+          // Normalize Backend Data Structure into Frontend Format
+          wifiData = (data.networks || []).map((net, index) => {
+            let signalDbm = -70;
+            if (typeof net.signal === 'string' && net.signal.includes('%')) {
+              const sigPct = parseInt(net.signal.replace('%', ''), 10) || 0;
+              signalDbm = Math.round((sigPct / 2) - 100);
+            } else if (typeof net.signal === 'number') {
+              signalDbm = net.signal;
+            }
+
+            const secType = net.security || net.auth || 'Unknown';
+            const isUnsecured = net.is_unsecured || secType === 'OPEN' || secType === 'Open' || secType === 'WEP';
+
+            return {
+              id: index + 1,
+              ssid: net.ssid || 'Hidden Network',
+              ip: net.ip || 'N/A',
+              bssid: net.bssid || 'N/A',
+              vendor: net.vendor || 'Unknown Vendor',
+              type: net.type || 'router',
+              channel: net.channel || 'N/A',
+              frequency: net.band || '2.4 GHz',
+              security: secType,
+              encryption: net.encryption || 'None',
+              signalDbm: signalDbm,
+              isUnsecured: isUnsecured,
+              vulnerability: net.vulnerability || net.risk_reason || (isUnsecured ? 'Unencrypted wireless communications' : 'None'),
+              isHidden: net.ssid === 'Hidden Network' || !net.ssid
+            };
+          });
+
+          // Update KPI Counters
+          const apCountElem = document.getElementById('apCount');
+          if (apCountElem) apCountElem.innerText = wifiData.length;
+
+          // Render UI Elements
+          renderWifiList();
+          analyzeChannelCongestion();
+          detectRogueAndDuplicates();
+          renderUnsecuredList();
+          
+          if (data.alerts && data.alerts.length > 0) {
+            updateAlertFeed(data.alerts);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch Wi-Fi telemetry:", error);
+      }
+    }
+
+    // Render Wi-Fi Cards
+    function renderWifiList() {
+      const listContainer = document.getElementById('wifiList');
+      if (!listContainer) return;
+      listContainer.innerHTML = '';
+
+      const filteredData = wifiData.filter(item => {
+        if (currentFilter === 'all') return true;
+        if (currentFilter === 'unsecured') return item.isUnsecured;
+        return item.type === currentFilter;
+      });
+
+      filteredData.forEach(item => {
+        const isPhone = item.type === 'phone';
+        const iconName = isPhone ? 'smartphone' : (item.isHidden ? 'wifi-off' : 'wifi');
+
+        const card = document.createElement('div');
+        card.className = "p-4 bg-slate-950 border border-slate-800 hover:border-indigo-500/50 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 cursor-pointer transition group";
+        card.onclick = () => openModal(item);
+
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-lg ${isPhone ? 'bg-indigo-500/10 text-indigo-400' : 'bg-blue-500/10 text-blue-400'}">
+              <i data-lucide="${iconName}" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h4 class="font-semibold text-sm text-slate-100 group-hover:text-indigo-400 transition">${item.ssid}</h4>
+                <span class="text-[10px] font-mono text-slate-500">Ch. ${item.channel}</span>
+              </div>
+              <p class="text-xs text-slate-400 font-mono">${item.bssid} • ${item.vendor}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            ${getSecurityBadges(item)}
+            ${getSignalBadge(item.signalDbm)}
+            <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:translate-x-0.5 transition"></i>
+          </div>
+        `;
+
+        listContainer.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    // Channel Congestion Analysis
+    function analyzeChannelCongestion() {
+      const channelCounts = {};
+      wifiData.forEach(item => {
+        channelCounts[item.channel] = (channelCounts[item.channel] || 0) + 1;
+      });
+
+      const container = document.getElementById('channelCongestionContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      Object.entries(channelCounts).forEach(([channel, count]) => {
+        const bar = document.createElement('div');
+        bar.className = "bg-slate-950 p-2 rounded-lg border border-slate-800 text-center";
+        bar.innerHTML = `
+          <div class="text-[10px] text-slate-400 font-mono">Ch. ${channel}</div>
+          <div class="text-lg font-bold text-indigo-400">${count}</div>
+          <div class="text-[9px] text-slate-500">${count === 1 ? 'Network' : 'Networks'}</div>
+        `;
+        container.appendChild(bar);
+      });
+    }
+
+    // Rogue AP & Duplicate SSID Detection Logic
+    function detectRogueAndDuplicates() {
+      const ssidMap = {};
+      wifiData.forEach(item => {
+        if (!ssidMap[item.ssid]) ssidMap[item.ssid] = [];
+        ssidMap[item.ssid].push(item);
+      });
+
+      const container = document.getElementById('rogueWarningList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      let duplicateCount = 0;
+      let rogueCount = 0;
+
+      Object.entries(ssidMap).forEach(([ssid, aps]) => {
+        if (aps.length > 1) {
+          duplicateCount++;
+          
+          const securityTypes = new Set(aps.map(a => a.security));
+          const isRogueWarning = securityTypes.size > 1;
+
+          if (isRogueWarning) rogueCount++;
+
+          const warningCard = document.createElement('div');
+          warningCard.className = `p-2.5 rounded-lg border text-xs font-mono space-y-1 ${
+            isRogueWarning 
+              ? 'bg-rose-950/40 border-rose-500/40 text-rose-200' 
+              : 'bg-amber-950/30 border-amber-500/30 text-amber-200'
+          }`;
+
+          warningCard.innerHTML = `
+            <div class="flex items-center justify-between font-bold">
+              <span>${isRogueWarning ? '⚠️ EVIL-TWIN / ROGUE WARNING' : 'ℹ️️ DUPLICATE SSID DETECTED'}</span>
+              <span class="text-[10px]">${aps.length} Access Points</span>
+            </div>
+            <div>SSID: "<strong class="underline">${ssid}</strong>"</div>
+            <div class="text-[11px] opacity-80">
+              ${isRogueWarning 
+                ? 'Warning: Access points share SSID but advertise different security settings/BSSIDs. Investigate for rogue cloning.' 
+                : 'Multiple APs broadcasting the same SSID (Normal for mesh/enterprise roaming).'}
+            </div>
+          `;
+          container.appendChild(warningCard);
+        }
+      });
+
+      const dupElem = document.getElementById('duplicateSsidCount');
+      const rogueElem = document.getElementById('rogueApCount');
+      if (dupElem) dupElem.innerText = duplicateCount;
+      if (rogueElem) rogueElem.innerText = rogueCount;
+    }
+
+    // Render Unsecured Network List
+    function renderUnsecuredList() {
+      const container = document.getElementById('unsecuredList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const unsecuredData = wifiData.filter(item => item.isUnsecured);
+
+      unsecuredData.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "p-3.5 bg-slate-950 border border-amber-500/30 rounded-xl space-y-2 hover:border-amber-500/60 transition cursor-pointer";
+        card.onclick = () => openModal(item);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <i data-lucide="unlock" class="w-4 h-4"></i> ${item.ssid}
+            </span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">${item.security}</span>
+          </div>
+          <p class="text-xs text-slate-300">${item.vulnerability}</p>
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1 text-slate-400">
+            <div><strong class="text-slate-500">IP Address:</strong> <span class="text-amber-300 font-bold">${item.ip}</span></div>
+            <div><strong class="text-slate-500">BSSID:</strong> <span class="text-slate-200">${item.bssid}</span></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    // WIDS Threat Alert Feed Generator
+    function updateAlertFeed(alerts) {
+      const alertFeed = document.getElementById('alertFeed');
+      if (!alertFeed) return;
+
+      alertFeed.innerHTML = '';
+      const now = new Date().toLocaleTimeString();
+
+      alerts.forEach(alertText => {
+        const isCritical = alertText.includes('CRITICAL') || alertText.includes('OPEN') || alertText.includes('DE-AUTH');
+        const card = document.createElement('div');
+        card.className = `p-3 ${isCritical ? 'bg-rose-950/30 border-rose-500/30' : 'bg-amber-950/30 border-amber-500/30'} border rounded-lg space-y-1`;
+        
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold ${isCritical ? 'text-rose-400' : 'text-amber-400'} flex items-center gap-1">
+              <i data-lucide="${isCritical ? 'zap' : 'shield-alert'}" class="w-3.5 h-3.5"></i> ${isCritical ? 'CRITICAL THREAT DETECTED' : 'SECURITY WARNING'}
+            </span>
+            <span class="text-[10px] font-mono text-slate-400">${now}</span>
+          </div>
+          <p class="text-xs text-slate-300">${alertText}</p>
+        `;
+        alertFeed.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    // Category Filtering Handler
+    function filterCategory(category) {
+      currentFilter = category;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.className = "filter-btn px-3 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-white transition";
+      });
+
+      const activeBtn = document.getElementById(`btn-${category}`);
+      if (activeBtn) activeBtn.className = "filter-btn px-3 py-1 rounded-md text-xs font-medium transition bg-indigo-600 text-white";
+
+      renderWifiList();
+    }
+
+    // Save Historical Snapshots
+    function saveScanSnapshot() {
+      const now = new Date().toLocaleTimeString();
+      const snapshot = {
+        timestamp: `Scan Snapshot (${now})`,
+        networks: wifiData.map(w => ({ ssid: w.ssid, bssid: w.bssid }))
+      };
+
+      scanHistory.push(snapshot);
+      updateHistorySelectOptions();
+      alert(`Snapshot saved at ${now}`);
+    }
+
+    function updateHistorySelectOptions() {
+      const select = document.getElementById('historySelect');
+      if (!select) return;
+      select.innerHTML = '<option value="">-- Choose Historical Snapshot --</option>';
+      scanHistory.forEach((snap, idx) => {
+        select.innerHTML += `<option value="${idx}">${snap.timestamp} [${snap.networks.length} APs]</option>`;
+      });
+    }
+
+    function compareScanHistory() {
+      const select = document.getElementById('historySelect');
+      const output = document.getElementById('historyDiffOutput');
+      if (!select || !output) return;
+
+      const idx = select.value;
+      if (idx === "") {
+        output.innerHTML = "Select a snapshot to see network changes over time.";
+        return;
+      }
+
+      const selectedSnap = scanHistory[idx];
+      const currentBssids = new Set(wifiData.map(w => w.bssid));
+      const oldBssids = new Set(selectedSnap.networks.map(w => w.bssid));
+
+      const added = wifiData.filter(w => !oldBssids.has(w.bssid));
+      const removed = selectedSnap.networks.filter(w => !currentBssids.has(w.bssid));
+
+      output.innerHTML = `
+        <div class="space-y-1">
+          <div class="text-emerald-400">➕ New Networks Detected: <strong>${added.length}</strong> (${added.map(a => a.ssid).join(', ') || 'None'})</div>
+          <div class="text-rose-400">➖ Networks No Longer Present: <strong>${removed.length}</strong> (${removed.map(r => r.ssid).join(', ') || 'None'})</div>
+        </div>
+      `;
+    }
+
+    // Security Audit Report Generator
+    function generateSecurityReport() {
+      const reportDate = document.getElementById('reportDate');
+      const reportContent = document.getElementById('reportContent');
+      if (reportDate) reportDate.innerText = new Date().toLocaleString();
+
+      const openNets = wifiData.filter(w => w.security === 'Open' || w.security === 'OPEN');
+      const weakNets = wifiData.filter(w => w.security === 'WEP');
+      
+      let overallScore = "SECURE";
+      let scoreColor = "text-emerald-400";
+
+      if (openNets.length > 0 || weakNets.length > 0) {
+        overallScore = "NEEDS ATTENTION";
+        scoreColor = "text-amber-400";
+      }
+
+      if (reportContent) {
+        reportContent.innerHTML = `
+          <div class="p-4 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-200">Overall Wireless Environment Status:</span>
+              <span class="font-mono font-bold ${scoreColor}">${overallScore}</span>
+            </div>
+            <p class="text-slate-400 text-xs">Total Airspace Networks Audited: <strong>${wifiData.length}</strong></p>
+          </div>
+
+          <div class="space-y-2">
+            <h4 class="font-bold text-slate-200">Key Security Audit Findings:</h4>
+            <ul class="list-disc pl-5 space-y-1 text-slate-300">
+              <li><strong>Open Networks Detected:</strong> ${openNets.length} network(s) broadcasting without encryption.</li>
+              <li><strong>Weak Security Protocols:</strong> ${weakNets.length} network(s) utilizing vulnerable WEP keys.</li>
+            </ul>
+          </div>
+
+          <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 text-[11px] text-slate-400 space-y-1">
+            <p class="font-bold text-slate-300">Recommended Remediation Steps:</p>
+            <p>1. Upgrade open or WEP-encrypted access points to WPA2-AES or WPA3 security standards.</p>
+            <p>2. Perform physical location triage on suspicious duplicated SSIDs using directional RSSI metering.</p>
+          </div>
+        `;
+      }
+
+      const modal = document.getElementById('reportModal');
+      if (modal) modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeReportModal() {
+      const modal = document.getElementById('reportModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Detailed Modal Handling
+    function openModal(item) {
+      document.getElementById('modalSsid').innerText = item.ssid;
+      document.getElementById('modalCategory').innerText = item.type === 'phone' ? 'Mobile Hotspot' : 'Wireless Access Point';
+      document.getElementById('modalIp').innerText = item.ip || 'N/A';
+      document.getElementById('modalBssid').innerText = item.bssid;
+      document.getElementById('modalVendor').innerText = item.vendor;
+      document.getElementById('modalSignal').innerText = `${item.signalDbm} dBm`;
+      document.getElementById('modalChannel').innerText = `Ch. ${item.channel} (${item.frequency})`;
+      document.getElementById('modalSecurity').innerText = `${item.security} / ${item.encryption}`;
+
+      const container = document.getElementById('modalIconContainer');
+      if (container) {
+        container.className = item.type === 'phone' ? "p-3 rounded-lg bg-indigo-500/10 text-indigo-400" : "p-3 rounded-lg bg-blue-500/10 text-blue-400";
+        container.innerHTML = `<i data-lucide="${item.type === 'phone' ? 'smartphone' : 'router'}" class="w-6 h-6"></i>`;
+      }
+
+      const detailsModal = document.getElementById('detailsModal');
+      if (detailsModal) detailsModal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      const detailsModal = document.getElementById('detailsModal');
+      if (detailsModal) detailsModal.classList.add('hidden');
+    }
+
+    // UI Scan Toggle Control
+    function toggleScan() {
+      isScanning = !isScanning;
+      const btnText = document.getElementById('scanBtnText');
+      const btn = document.getElementById('scanBtn');
+      const icon = document.getElementById('scanIcon');
+
+      if (isScanning) {
+        if (btnText) btnText.innerText = "Stop Scanning";
+        if (icon) icon.classList.add('animate-spin');
+        if (btn) btn.className = "flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-lg shadow-indigo-600/20";
+        fetchWifiScanData();
+        scanInterval = setInterval(fetchWifiScanData, 5000);
+      } else {
+        if (btnText) btnText.innerText = "Start Scanning";
+        if (icon) icon.classList.remove('animate-spin');
+        if (btn) btn.className = "flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-lg shadow-emerald-600/20";
+        clearInterval(scanInterval);
+      }
+    }
+
+    // Initialize Active API Scanning
+    fetchWifiScanData();
+    scanInterval = setInterval(fetchWifiScanData, 5000);
+    updateHistorySelectOptions();
+</script>
+</body>
+</html>
