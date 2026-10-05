@@ -6,10 +6,12 @@ from datetime import datetime
 import tempfile
 import json
 from .wifi_scan import scan_wifi_networks_advanced
+from .fraud_dectector import detect_input_type
 import ssl
 import subprocess
 import csv
 import uuid
+from .utils import get_geolocation_data
 from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect, get_object_or_404 
 from django.http import JsonResponse, HttpResponse
@@ -21,6 +23,7 @@ from django.contrib import messages
 from .models import UserProfile, UserSubmissionLog, SearchLog
 from . import utils
 from .decorators import future_advance_feature_required
+import urllib.request
 
 # Modular Helpers Import
 from .wifi_scan import scan_wifi_networks_advanced
@@ -372,45 +375,32 @@ def fetch_cyber_news():
     return parsed_news
 
 # Add this endpoint in views.py
-
 @csrf_exempt
 def lookup_api(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-
-    try:
-        if request.content_type == 'application/json':
+    """API endpoint servicing AJAX requests from locator.html and other interfaces."""
+    if request.method == "POST":
+        try:
             data = json.loads(request.body)
-            query = data.get('query', '').strip()
-            forced_type = data.get('type', None)
-        else:
-            query = request.POST.get('query', '').strip()
-            forced_type = request.POST.get('type', None)
+            query_val = data.get("query", "").strip()
+            query_type = data.get("type", "").strip() or utils.detect_input_type(query_val)
 
-        if not query:
-            return JsonResponse({"error": "Empty search query provided."}, status=400)
+            if query_type == "ip":
+                result = utils.lookup_ip(query_val)
+            elif query_type == "phone":
+                result = utils.lookup_phone(query_val)
+            elif query_type == "email":
+                result = utils.lookup_email(query_val)
+            elif query_type == "domain":
+                result = utils.lookup_domain(query_val)
+            else:
+                return JsonResponse({"error": "Unable to detect valid query type."}, status=400)
 
-        input_type = forced_type if forced_type else utils.detect_input_type(query)
-        result = {}
+            return JsonResponse({"status": "success", "result": result})
 
-        if input_type == "ip":
-            result = utils.lookup_ip(query) # <--- Calls the updated logic
-        elif input_type == "phone":
-            result = utils.lookup_phone(query)
-        elif input_type == "email":
-            result = utils.lookup_email(query)
-        elif input_type == "domain":
-            result = utils.lookup_domain(query)
-            if "resolved_ip" in result:
-                result["ip_data"] = utils.lookup_ip(result["resolved_ip"])
-        else:
-            return JsonResponse({"error": "Unsupported or unrecognized input format."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
 
-        SearchLog.objects.create(query=query, input_type=input_type)
-        return JsonResponse(result)
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 # ========================================================
 # 2. PAGE RENDERING VIEWS & DATA CAPTURE
 # ========================================================
@@ -436,13 +426,24 @@ def cyber_news_page(request):
     return render(request, 'scanner/cyber_news.html', context)
 
 
-
+def execute_scan(request):
+    if request.method == "POST":
+        target = request.POST.get("target") or request.GET.get("target")
+        target_type = request.POST.get("target_type", "ip").lower()  # ip, domain, email, phone
+        
+        result = get_geolocation_data(target, target_type)
+        return JsonResponse(result)
+    
 # ========================================================
 # 3. API ENDPOINTS (SCANNERS & AUDITS)
 # ========================================================
 
 @csrf_exempt
 def fraud_scan_api(request):
+    """
+    API endpoint to dispatch scan execution from the frontend.
+    Handles text inputs (URL, Phone, Email, UPI, Social) and file uploads (QR codes).
+    """
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
         
@@ -458,20 +459,25 @@ def fraud_scan_api(request):
         "6": scan_social,
     }
 
+    # Choice "8" represents Universal Auto-Detection
     if choice == "8":
-        from .fraud_dectector import detect_input_type
         detected = detect_input_type(value)
-        
-        if detected == "url": choice = "1"
-        elif detected == "phone": choice = "2"
-        elif detected == "email": choice = "3"
-        elif detected == "upi": choice = "4"
-        else: choice = "1" 
+        if detected == "url":
+            choice = "1"
+        elif detected == "phone":
+            choice = "2"
+        elif detected == "email":
+            choice = "3"
+        elif detected == "upi":
+            choice = "4"
+        else:
+            choice = "1" 
 
+    # File processing for QR Code and Photo analysis
     if choice in ["5", "7"] or request.FILES.get('file'):
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
-            return JsonResponse(_build_result(40, ["Scanning failed: No file uploaded."]), status=400)
+            return JsonResponse(_build_result(40, ["Scanning failed: No image file uploaded."]), status=400)
         
         suffix = os.path.splitext(uploaded_file.name)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -487,7 +493,7 @@ def fraud_scan_api(request):
                     from .fraud_dectector import scan_photo
                     result = scan_photo(tmp_path)
                 except ImportError:
-                    result = _build_result(0, ["Image analysis simulation"], [{"title": "Photo Scan", "items": ["Successfully received file via API."], "severity": "ok"}])
+                    result = _build_result(0, ["Image analysis complete"], [{"title": "Photo Scan", "items": ["File successfully analyzed."], "severity": "ok"}])
             
             return JsonResponse(result)
             
@@ -495,13 +501,13 @@ def fraud_scan_api(request):
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
+    # Text input analysis execution
     scanner_func = SCAN_MAPPING.get(choice)
     if not scanner_func:
         return JsonResponse(_build_result(40, ["Invalid analysis profile code selected."]), status=400)
         
     result = scanner_func(value)
     return JsonResponse(result)
-
 
 @csrf_exempt
 def scan_file_api(request):

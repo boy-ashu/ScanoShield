@@ -1,0 +1,184 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanoShield | Emergency Alert Receiver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        body { background: #07090e; color: #fff; }
+        @keyframes pulseRed {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+            70% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
+        }
+        .alert-active {
+            animation: pulseRed 1.4s infinite;
+            border-color: #ef4444 !important;
+        }
+    </style>
+</head>
+<body class="bg-[#07090e] min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md">
+
+        <!-- Phone-like Header -->
+        <div class="text-center mb-6">
+            <div class="text-5xl mb-2">📱</div>
+            <h1 class="text-xl font-bold text-white">Mobile Device</h1>
+            <p class="text-gray-500 text-xs mt-1">Listening for Cell Broadcast alerts...</p>
+        </div>
+
+        <!-- Status Card -->
+        <div id="statusCard" class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 mb-5">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-xs font-mono text-gray-400 tracking-wider">SIGNAL STATUS</span>
+                <span id="connStatus" class="text-xs font-mono text-yellow-400">Connecting...</span>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Device ID</span>
+                    <span id="deviceId" class="font-mono text-cyan-300">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Current Location</span>
+                    <span id="locationText" class="font-mono text-gray-300 text-xs">Detecting...</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Listening</span>
+                    <span class="text-emerald-400 font-mono text-xs">ACTIVE</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert appears here -->
+        <div id="alertBox" class="hidden bg-red-950/70 border-2 border-red-500 rounded-2xl p-6 text-center alert-active">
+            <div class="text-4xl mb-3">🚨</div>
+            <div class="text-xs font-mono text-red-300 mb-1 tracking-widest">CELL BROADCAST ALERT</div>
+            <h2 class="text-lg font-bold text-white mb-3">EMERGENCY ALERT</h2>
+            <p id="alertMessage" class="text-gray-100 text-sm leading-relaxed mb-4"></p>
+            <p id="alertMeta" class="text-xs text-red-300/80 font-mono"></p>
+        </div>
+
+        <!-- Small note -->
+        <p class="text-center text-[11px] text-gray-600 mt-6 leading-relaxed">
+            This device automatically receives alerts<br>
+            when it is inside the targeted area.<br>
+            No registration required.
+        </p>
+    </div>
+
+    <script>
+        let socket = null;
+        let deviceName = "Device-" + Math.floor(Math.random() * 9000 + 1000);
+        let myLat = 28.6139;
+        let myLon = 77.2090;
+
+        document.getElementById('deviceId').innerText = deviceName;
+
+        function connect() {
+            socket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/alert/');
+
+            socket.onopen = function () {
+                document.getElementById('connStatus').innerText = '● ONLINE';
+                document.getElementById('connStatus').className = 'text-xs font-mono text-emerald-400';
+                sendLocation();
+            };
+
+            socket.onclose = function () {
+                document.getElementById('connStatus').innerText = '● RECONNECTING...';
+                document.getElementById('connStatus').className = 'text-xs font-mono text-yellow-400';
+                setTimeout(connect, 2500);
+            };
+
+            socket.onmessage = function (e) {
+                const data = JSON.parse(e.data);
+                if (data.type === 'alert') {
+                    showAlert(data.message, data.distance);
+                }
+            };
+        }
+
+        function sendLocation() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    action: 'register',
+                    lat: myLat,
+                    lon: myLon,
+                    name: deviceName
+                }));
+            }
+        }
+
+        function showAlert(message, distance) {
+            const box = document.getElementById('alertBox');
+            document.getElementById('alertMessage').innerText = message;
+            document.getElementById('alertMeta').innerText = `Distance from center: ${distance} km`;
+
+            box.classList.remove('hidden');
+
+            // Loud attention sound
+            playAttentionTone();
+
+            // Speak the message (like real government alerts)
+            const utter = new SpeechSynthesisUtterance(
+                "Emergency alert. " + message + ". I repeat. " + message
+            );
+            utter.rate = 0.9;
+            utter.volume = 1;
+            speechSynthesis.cancel();
+            speechSynthesis.speak(utter);
+        }
+
+        function playAttentionTone() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            // Two-tone pattern similar to real WEA alerts
+            const tones = [853, 960, 853, 960, 853];
+            tones.forEach((freq, i) => {
+                setTimeout(() => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.45, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.4);
+                }, i * 420);
+            });
+        }
+
+        // Try to get real GPS, otherwise use default (Delhi)
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    myLat = pos.coords.latitude;
+                    myLon = pos.coords.longitude;
+                    document.getElementById('locationText').innerText = 
+                        myLat.toFixed(4) + ', ' + myLon.toFixed(4);
+                    sendLocation();
+                },
+                () => {
+                    document.getElementById('locationText').innerText = 
+                        myLat.toFixed(4) + ', ' + myLon.toFixed(4) + ' (default)';
+                    sendLocation();
+                }
+            );
+        } else {
+            document.getElementById('locationText').innerText = 
+                myLat.toFixed(4) + ', ' + myLon.toFixed(4) + ' (default)';
+        }
+
+        // Start
+        connect();
+
+        // Update location every 15 seconds (optional)
+        setInterval(sendLocation, 15000);
+    </script>
+</body>
+</html>

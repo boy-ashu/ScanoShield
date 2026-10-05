@@ -65,13 +65,6 @@
       background: #020617 !important;
       font-family: 'Inter', sans-serif;
     }
-    #map {
-      height: 350px !important;
-      min-height: 350px !important;
-      width: 100% !important;
-      display: block !important;
-      background-color: #020617 !important;
-    }
     .leaflet-popup-content-wrapper, .leaflet-popup-tip {
       background: #0f172a !important;
       color: #f8fafc !important;
@@ -355,7 +348,7 @@
       ]
     };
 
-    // Simulated Threat & Geolocation Data Generator
+    // Simulated Threat & Geolocation Data Generator for Domains/Emails/Phones when CORS is limited
     const MOCK_INTELLIGENCE_DB = {
       "github.com": { ip: "140.82.121.4", country: "United States", city: "San Francisco", region: "California", lat: 37.7749, lon: -122.4194, isp: "GitHub, Inc.", org: "AS36459 GitHub", threatScore: 5, mx: "alt1.aspmx.l.google.com" },
       "wikipedia.org": { ip: "185.15.183.160", country: "Netherlands", city: "Amsterdam", region: "North Holland", lat: 52.3676, lon: 4.9041, isp: "Wikimedia Foundation", org: "AS14907 Wikimedia", threatScore: 2, mx: "mx1001.wikimedia.org" },
@@ -372,226 +365,82 @@
       updateSampleChips();
       loadHistory();
       
-      // Attach Form Listener if available
-      const searchForm = document.getElementById('searchForm');
-      if (searchForm) {
-        searchForm.addEventListener('submit', handleSearch);
-      }
-
       // Execute default scan
       performScan('8.8.8.8', 'ip');
 
-      const myIpBtn = document.getElementById('myIpBtn');
-      if (myIpBtn) {
-        myIpBtn.addEventListener('click', () => {
-          fetch('https://api.ipify.org?format=json')
-            .then(res => res.json())
-            .then(data => {
-              selectTab('ip');
-              const targetInput = document.getElementById('targetInput');
-              if (targetInput) targetInput.value = data.ip;
-              performScan(data.ip, 'ip');
-              showToast(`Loaded your public IP: ${data.ip}`, 'success');
-            })
-            .catch(() => showToast('Failed to fetch public IP', 'error'));
-        });
-      }
+      document.getElementById('myIpBtn').addEventListener('click', () => {
+        fetch('https://api.ipify.org?format=json')
+          .then(res => res.json())
+          .then(data => {
+            selectTab('ip');
+            document.getElementById('targetInput').value = data.ip;
+            performScan(data.ip, 'ip');
+            showToast(`Loaded your public IP: ${data.ip}`, 'success');
+          })
+          .catch(() => showToast('Failed to fetch public IP', 'error'));
+      });
     });
-
-    function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
-      }
-      return cookieValue;
-    }
-
-    async function executeIntelligenceScan() {
-      const inputElem = document.getElementById('targetInput');
-      const targetInput = inputElem ? inputElem.value.trim() : '';
-      const activeTab = document.querySelector('.type-tab.active')?.dataset.type || currentSearchType || 'ip';
-
-      if (!targetInput) {
-        alert("Please enter a target to scan.");
-        return;
-      }
-
-      await performScan(targetInput, activeTab);
-    }
 
     /* ===================================================================
        Map Engine Setup (Leaflet.js)
        =================================================================== */
-    function initMap(lat = 20.5937, lon = 78.9629) {
-  const mapContainer = document.getElementById('map');
-  if (!mapContainer) return;
+    function initMap() {
+      // Initialize map with dark mode tile set
+      map = L.map('map', { zoomControl: false }).setView([37.3861, -122.0839], 10);
 
-  if (map !== null) {
-    map.remove();
-  }
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors | GeoIntel'
+      }).addTo(map);
 
-  map = L.map('map', {
-    center: [lat, lon],
-    zoom: 13,
-    zoomControl: true
-  });
-
-
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_49dk_1_1c372a3289782fe39a53c87d', {
-  maxZoom: 16,
-  subdomains: 'abcd',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-}).addTo(map);
-  currentMarker = L.marker([lat, lon]).addTo(map);
-
-  setTimeout(() => {
-    map.invalidateSize();
-  }, 300);
-}
-
-  function updateMapLocation(lat, lon, label, city, isp) {
-  if (!map) {
-    console.error("Map instance not initialized.");
-    return;
-  }
-
-  // Parse IP coordinates as fallback
-  const parsedLat = parseFloat(lat);
-  const parsedLon = parseFloat(lon);
-  const validLat = Number.isFinite(parsedLat) ? parsedLat : 38.8951;
-  const validLon = Number.isFinite(parsedLon) ? parsedLon : -77.0364;
-
-  // Helper function to render marker & map view
-  const renderLocation = (targetLat, targetLon, displayLabel, displayLocationName, displayIsp, accuracyRadius = null) => {
-    const position = [targetLat, targetLon];
-
-    // Remove previous map layers cleanly
-    if (currentMarker && map.hasLayer(currentMarker)) {
-      map.removeLayer(currentMarker);
-    }
-    if (currentAccuracyCircle && map.hasLayer(currentAccuracyCircle)) {
-      map.removeLayer(currentAccuracyCircle);
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
     }
 
-    // Update UI coordinates
-    const latElem = document.getElementById('mapLat');
-    const lonElem = document.getElementById('mapLon');
-    if (latElem) latElem.textContent = targetLat.toFixed(4);
-    if (lonElem) lonElem.textContent = targetLon.toFixed(4);
+    function updateMapLocation(lat, lon, label, city) {
+      if (!map) return;
 
-    // Custom marker icon design
-    const customIcon = L.divIcon({
-      className: 'custom-map-pin',
-      html: `<div class="w-6 h-6 rounded-full bg-brand-500/40 border-2 border-brand-500 flex items-center justify-center glow-cyan animate-bounce">
-               <div class="w-2 h-2 rounded-full bg-white"></div>
-             </div>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12]
-    });
+      const position = [lat, lon];
+      map.flyTo(position, 11, { duration: 1.5 });
 
-    // Add marker
-    currentMarker = L.marker(position, { icon: customIcon }).addTo(map);
+      document.getElementById('mapLat').textContent = lat.toFixed(4);
+      document.getElementById('mapLon').textContent = lon.toFixed(4);
 
-    // Add accuracy circle
-    const radiusInMeters = accuracyRadius ? accuracyRadius : 20000;
-    currentAccuracyCircle = L.circle(position, {
-      color: '#06b6d4',
-      fillColor: '#06b6d4',
-      fillOpacity: 0.12,
-      radius: radiusInMeters
-    }).addTo(map);
+      // Remove previous markers
+      if (currentMarker) map.removeLayer(currentMarker);
+      if (currentAccuracyCircle) map.removeLayer(currentAccuracyCircle);
 
-    const ispDisplay = displayIsp || 'Cellular / Network Provider';
-    const locationNameDisplay = displayLocationName || city || 'Unknown Location';
-    const tagLabel = displayLabel || 'Target Location';
-    const nodeText = accuracyRadius ? 'Exact Device Fix' : 'Approximate ISP / Network Node';
+      // Custom Glowing Icon
+      const customIcon = L.divIcon({
+        className: 'custom-map-pin',
+        html: `<div class="w-6 h-6 rounded-full bg-brand-500/40 border-2 border-brand-500 flex items-center justify-center glow-cyan animate-bounce">
+                 <div class="w-2 h-2 rounded-full bg-white"></div>
+               </div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
 
-    currentMarker.bindPopup(`
-      <div class="p-1 font-mono text-xs">
-        <strong class="text-brand-500 block text-sm">${tagLabel}</strong>
-        <span class="text-slate-300 block mt-1"><i class="fa-solid fa-location-dot"></i> ${locationNameDisplay}</span>
-        <span class="text-slate-300 block mt-0.5"><i class="fa-solid fa-network-wired"></i> ${ispDisplay}</span>
-        <span class="text-slate-400 text-[10px] block mt-0.5">${nodeText}</span>
-      </div>
-    `);
+      currentMarker = L.marker(position, { icon: customIcon }).addTo(map);
 
-    // Redraw container and pan to position
-    setTimeout(() => {
-      map.invalidateSize();
-      map.flyTo(position, accuracyRadius ? 14 : 11, { duration: 1.5 });
-      currentMarker.openPopup();
-    }, 100);
-  };
+      // Add regional accuracy circle (Simulating network ISP coverage zone)
+      currentAccuracyCircle = L.circle(position, {
+        color: '#06b6d4',
+        fillColor: '#06b6d4',
+        fillOpacity: 0.12,
+        radius: 20000 // ~20km network radius estimate
+      }).addTo(map);
 
-  // 1. Try GPS location first
-  if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const gpsLat = pos.coords.latitude;
-        const gpsLon = pos.coords.longitude;
-        let placeName = "Fetching address...";
-
-        // Render immediately with coordinates
-        renderLocation(
-          gpsLat,
-          gpsLon,
-          'Your Device Location',
-          placeName,
-          isp || 'Local Network',
-          pos.coords.accuracy
-        );
-
-        // Fetch exact place name via Reverse Geocoding API
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${gpsLat}&lon=${gpsLon}`);
-          const data = await response.json();
-          if (data && data.display_name) {
-            // Extract a concise location name (city/town + county/state)
-            const addr = data.address;
-            const shortName = addr.suburb || addr.neighbourhood || addr.city || addr.town || addr.village || data.display_name.split(',')[0];
-            const area = addr.state_district || addr.state || '';
-            placeName = area ? `${shortName}, ${area}` : shortName;
-
-            // Re-render marker popup with actual address name
-            // Change this line when calling renderLocation inside GPS success callback:
-renderLocation(
-  gpsLat,
-  gpsLon,
-  'Your Device Location',
-  placeName,
-  'Local ISP / Device Network', // Replace Google LLC with local network
-  pos.coords.accuracy
-);
-          }
-        } catch (err) {
-          console.warn("Could not reverse geocode location:", err);
-        }
-      },
-      (err) => {
-        console.warn("GPS access denied or failed. Falling back to IP location:", err.message);
-        renderLocation(validLat, validLon, label, city, isp);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 0
-      }
-    );
-  } else {
-    // 2. Fallback to IP details
-    renderLocation(validLat, validLon, label, city, isp);
-  }
-}
+      // Popup card
+      currentMarker.bindPopup(`
+        <div class="p-1 font-mono text-xs">
+          <strong class="text-brand-500 block text-sm">${label}</strong>
+          <span class="text-slate-300 block mt-1"><i class="fa-solid fa-city"></i> ${city}</span>
+          <span class="text-slate-400 text-[10px] block mt-0.5">Approximate ISP / Network Node</span>
+        </div>
+      `).openPopup();
+    }
 
     function resetMapView() {
-      if (currentMarker && map) {
+      if (currentMarker) {
         map.flyTo(currentMarker.getLatLng(), 10);
       }
     }
@@ -609,66 +458,48 @@ renderLocation(
       });
     }
 
-    function getDeviceExactLocation() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            showToast("Exact GPS location acquired!", "success");
-            updateMapLocation(lat, lon, "Your Device", "Exact Device Location");
-          },
-          (error) => {
-            showToast("GPS Permission Denied. Falling back to IP lookup.", "error");
-          },
-          { enableHighAccuracy: true }
-        );
-      } else {
-        showToast("Geolocation is not supported by your browser.", "error");
-      }
-    }
-
     function selectTab(type) {
       currentSearchType = type;
       const tabs = document.querySelectorAll('.type-tab');
       
       tabs.forEach(tab => {
         if (tab.getAttribute('data-type') === type) {
-          tab.className = "type-tab active py-2 rounded-md transition text-slate-300 hover:text-white bg-slate-800 font-semibold text-brand-500 border border-slate-700 shadow-sm";
+          tab.className = "type-tab py-2 rounded-md transition text-slate-300 hover:text-white bg-slate-800 font-semibold text-brand-500 border border-slate-700 shadow-sm";
         } else {
           tab.className = "type-tab py-2 rounded-md transition text-slate-400 hover:text-white";
         }
       });
 
+      // Update Form Inputs & Placeholders
       const input = document.getElementById('targetInput');
       const label = document.getElementById('inputLabel');
       const tip = document.getElementById('formatTip');
       const icon = document.getElementById('targetIcon');
       const headerToggle = document.getElementById('emailHeaderToggle');
 
-      if (headerToggle) headerToggle.classList.add('hidden');
+      headerToggle.classList.add('hidden');
 
       if (type === 'ip') {
-        if (label) label.textContent = "Target IP Address";
-        if (input) input.placeholder = "e.g., 8.8.8.8 or 1.1.1.1";
-        if (tip) tip.textContent = "IPv4 / IPv6";
-        if (icon) icon.className = "fa-solid fa-network-wired";
+        label.textContent = "Target IP Address";
+        input.placeholder = "e.g., 8.8.8.8 or 1.1.1.1";
+        tip.textContent = "IPv4 / IPv6";
+        icon.className = "fa-solid fa-network-wired";
       } else if (type === 'domain') {
-        if (label) label.textContent = "Target Domain Name";
-        if (input) input.placeholder = "e.g., github.com or proton.me";
-        if (tip) tip.textContent = "FQDN Domain";
-        if (icon) icon.className = "fa-solid fa-globe";
+        label.textContent = "Target Domain Name";
+        input.placeholder = "e.g., github.com or proton.me";
+        tip.textContent = "FQDN Domain";
+        icon.className = "fa-solid fa-globe";
       } else if (type === 'email') {
-        if (label) label.textContent = "Target Email Address";
-        if (input) input.placeholder = "e.g., security@google.com";
-        if (tip) tip.textContent = "Standard Email";
-        if (icon) icon.className = "fa-solid fa-envelope";
-        if (headerToggle) headerToggle.classList.remove('hidden');
+        label.textContent = "Target Email Address";
+        input.placeholder = "e.g., security@google.com";
+        tip.textContent = "Standard Email";
+        icon.className = "fa-solid fa-envelope";
+        headerToggle.classList.remove('hidden');
       } else if (type === 'phone') {
-        if (label) label.textContent = "Target Phone Number";
-        if (input) input.placeholder = "e.g., +14155552671";
-        if (tip) tip.textContent = "E.164 Format";
-        if (icon) icon.className = "fa-solid fa-phone";
+        label.textContent = "Target Phone Number";
+        input.placeholder = "e.g., +14155552671";
+        tip.textContent = "E.164 Format";
+        icon.className = "fa-solid fa-phone";
       }
 
       updateSampleChips();
@@ -676,7 +507,6 @@ renderLocation(
 
     function updateSampleChips() {
       const container = document.getElementById('sampleChips');
-      if (!container) return;
       container.innerHTML = '';
       
       const presets = SAMPLE_PRESETS[currentSearchType] || [];
@@ -686,8 +516,7 @@ renderLocation(
         chip.className = "text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono transition";
         chip.textContent = p.label;
         chip.onclick = () => {
-          const input = document.getElementById('targetInput');
-          if (input) input.value = p.value;
+          document.getElementById('targetInput').value = p.value;
           performScan(p.value, currentSearchType);
         };
         container.appendChild(chip);
@@ -696,7 +525,7 @@ renderLocation(
 
     function toggleHeaderDrawer() {
       const drawer = document.getElementById('emailHeaderDrawer');
-      if (drawer) drawer.classList.toggle('hidden');
+      drawer.classList.toggle('hidden');
     }
 
     /* ===================================================================
@@ -704,65 +533,48 @@ renderLocation(
        =================================================================== */
     function handleSearch(e) {
       e.preventDefault();
-      const input = document.getElementById('targetInput');
-      const targetVal = input ? input.value.trim() : '';
+      const targetVal = document.getElementById('targetInput').value.trim();
       if (!targetVal) return;
       performScan(targetVal, currentSearchType);
     }
 
     async function performScan(target, type) {
       const submitBtn = document.getElementById('submitBtn');
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Analyzing Target...`;
-      }
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Analyzing Target...`;
 
-      let scanResult = null;
+      showToast(`Initiating OSINT scan on ${target}...`, 'info');
 
       try {
-        const response = await fetch('/api/lookup/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken') || ''
-          },
-          body: JSON.stringify({ query: target, type: type })
-        });
+        let payload = null;
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.status === "success") {
-            scanResult = data.result;
-          }
+        if (type === 'ip') {
+          payload = await fetchIpData(target);
+        } else if (type === 'domain') {
+          payload = await fetchDomainData(target);
+        } else if (type === 'email') {
+          payload = await fetchEmailData(target);
+        } else if (type === 'phone') {
+          payload = await fetchPhoneData(target);
         }
-      } catch (err) {
-        console.warn("Backend API unavailable. Falling back to client-side lookup engine.", err);
-      }
 
-      // Fallback Engine if backend API is not responding
-      if (!scanResult) {
-        if (type === 'ip') scanResult = await fetchIpData(target);
-        else if (type === 'domain') scanResult = await fetchDomainData(target);
-        else if (type === 'email') scanResult = await fetchEmailData(target);
-        else if (type === 'phone') scanResult = await fetchPhoneData(target);
-      }
-
-      if (scanResult) {
-        renderResults(scanResult, target, type);
-        addToHistory(target, type, scanResult.country || 'Unknown');
+        lastScanData = payload;
+        renderResults(payload, target, type);
+        addToHistory(target, type, payload.country || 'Unknown');
         showToast(`Scan complete for ${target}`, 'success');
-      } else {
-        showToast("Lookup failed to process.", 'error');
-      }
 
-      if (submitBtn) {
+      } catch (err) {
+        console.error(err);
+        showToast(`Scan failed: ${err.message}`, 'error');
+      } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = `<i class="fa-solid fa-radar"></i> <span>Execute Intelligence Scan</span>`;
       }
     }
 
-    /* Client-side Fallback Data Handlers */
+    /* API Fetchers */
     async function fetchIpData(ip) {
+      // Use public ipinfo API (free tier endpoint)
       try {
         const res = await fetch(`https://ipapi.co/${ip}/json/`);
         if (!res.ok) throw new Error("Public IP Lookup limit reached");
@@ -779,9 +591,10 @@ renderLocation(
           lon: parseFloat(data.longitude) || -122.42,
           isp: data.org || data.asn || "Regional ISP",
           asn: data.asn || "AS-UNKNOWN",
-          threatScore: Math.floor(Math.random() * 15)
+          threatScore: Math.floor(Math.random() * 15) // Simulated abuse score
         };
       } catch (e) {
+        // Fallback simulated result for offline/rate-limited environments
         return {
           ip: ip,
           country: "United States",
@@ -815,6 +628,8 @@ renderLocation(
           threatScore: mock.threatScore
         };
       }
+      
+      // Fallback lookup via IP conversion attempt
       return {
         domain: domain,
         resolvedIp: "104.21.88.12",
@@ -831,14 +646,14 @@ renderLocation(
     }
 
     async function fetchEmailData(email) {
-      const rawHeaderElem = document.getElementById('rawHeaderInput');
-      const rawHeader = rawHeaderElem ? rawHeaderElem.value.trim() : '';
+      const rawHeader = document.getElementById('rawHeaderInput').value.trim();
       let extractedIp = null;
 
+      // Header Parsing Logic (Regex for IPv4)
       if (rawHeader) {
         const ipMatches = rawHeader.match(/\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/g);
         if (ipMatches && ipMatches.length > 0) {
-          extractedIp = ipMatches[0];
+          extractedIp = ipMatches[0]; // First IP extracted from trace
         }
       }
 
@@ -877,6 +692,7 @@ renderLocation(
         };
       }
 
+      // Default Phone Metadata Extraction Parsing
       return {
         phone: phone,
         country: "United States",
@@ -895,81 +711,68 @@ renderLocation(
        UI Rendering Functions
        =================================================================== */
     function renderResults(data, target, type) {
-      const lat = parseFloat(data.latitude || data.lat);
-      const lon = parseFloat(data.longitude || data.lon);
-      const city = data.city || data.region || 'Unknown Region';
-      const isp = data.isp_organization || data.carrier || data.isp || 'Network Node';
+      // 1. Update Map
+      updateMapLocation(data.lat, data.lon, target, data.city);
 
-      if (!isNaN(lat) && !isNaN(lon)) {
-        updateMapLocation(lat, lon, target, city, isp);
-      }
+      // 2. Update Overview Header
+      document.getElementById('resultTitle').textContent = target;
+      document.getElementById('resultBadge').textContent = `${type.toUpperCase()} ANALYSIS`;
 
-      const titleElem = document.getElementById('resultTitle');
-      const badgeElem = document.getElementById('resultBadge');
-      if (titleElem) titleElem.textContent = target;
-      if (badgeElem) badgeElem.textContent = `${type.toUpperCase()} ANALYSIS`;
-
+      // 3. Update Threat Badge
       const riskBadge = document.getElementById('riskBadge');
       const score = data.threatScore || 0;
-      if (riskBadge) {
-        if (score > 50) {
-          riskBadge.className = "text-xs font-bold text-rose-500 flex items-center justify-end gap-1";
-          riskBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> High Risk (${score}/100)`;
-        } else if (score > 15) {
-          riskBadge.className = "text-xs font-bold text-amber-400 flex items-center justify-end gap-1";
-          riskBadge.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Moderate Risk (${score}/100)`;
-        } else {
-          riskBadge.className = "text-xs font-bold text-emerald-400 flex items-center justify-end gap-1";
-          riskBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Low Risk (${score}/100)`;
-        }
+      if (score > 50) {
+        riskBadge.className = "text-xs font-bold text-rose-500 flex items-center justify-end gap-1";
+        riskBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> High Risk (${score}/100)`;
+      } else if (score > 15) {
+        riskBadge.className = "text-xs font-bold text-amber-400 flex items-center justify-end gap-1";
+        riskBadge.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Moderate Risk (${score}/100)`;
+      } else {
+        riskBadge.className = "text-xs font-bold text-emerald-400 flex items-center justify-end gap-1";
+        riskBadge.innerHTML = `<i class="fa-solid fa-shield-halved"></i> Low Risk (${score}/100)`;
       }
 
-      const setElemText = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val || 'N/A';
-      };
+      // 4. Update Geo & Network Cards
+      document.getElementById('resCountry').textContent = data.country;
+      document.getElementById('resRegion').textContent = data.region;
+      document.getElementById('resCity').textContent = data.city;
+      document.getElementById('resTimezone').textContent = data.timezone || "N/A";
+      document.getElementById('resISP').textContent = data.isp;
+      document.getElementById('resASN').textContent = data.asn || "N/A";
+      document.getElementById('resOrg').textContent = data.isp;
 
-      setElemText('resCountry', data.country);
-      setElemText('resRegion', data.region);
-      setElemText('resCity', city);
-      setElemText('resTimezone', data.timezone);
-      setElemText('resISP', isp);
-      setElemText('resASN', data.asn);
-      setElemText('resOrg', isp);
-
+      // 5. Update Type Specific Extended Card
       const metaContainer = document.getElementById('typeSpecificMeta');
-      if (metaContainer) {
-        metaContainer.innerHTML = '';
+      metaContainer.innerHTML = '';
 
-        if (type === 'ip') {
-          metaContainer.innerHTML = `
-            <div><span class="text-slate-500 block text-[10px]">PROXY / VPN FLAG</span><span class="text-emerald-400">Clean / Residential</span></div>
-            <div><span class="text-slate-500 block text-[10px]">REVERSE DNS</span><span class="text-slate-200">node-${(data.ip || target).replace(/\./g, '-')}.net</span></div>
-            <div><span class="text-slate-500 block text-[10px]">BOTNET SCORE</span><span class="text-emerald-400">0.02 (Low)</span></div>
-          `;
-        } else if (type === 'domain') {
-          metaContainer.innerHTML = `
-            <div><span class="text-slate-500 block text-[10px]">RESOLVED SERVER IP</span><span class="text-brand-500">${data.resolvedIp || 'N/A'}</span></div>
-            <div><span class="text-slate-500 block text-[10px]">PRIMARY MX RECORD</span><span class="text-slate-200">${data.mxRecord || 'N/A'}</span></div>
-            <div><span class="text-slate-500 block text-[10px]">HOSTING TYPE</span><span class="text-slate-200">Cloud Infrastructure</span></div>
-          `;
-        } else if (type === 'email') {
-          metaContainer.innerHTML = `
-            <div><span class="text-slate-500 block text-[10px]">MAIL SERVER IP</span><span class="text-brand-500">${data.extractedHeaderIp || 'N/A'}</span></div>
-            <div><span class="text-slate-500 block text-[10px]">MX GATEWAY</span><span class="text-slate-200">${data.mxRecord || 'N/A'}</span></div>
-            <div><span class="text-slate-500 block text-[10px]">HEADER ORIGIN TRACE</span><span class="text-emerald-400">${data.extractedHeaderIp ? 'IP Extracted' : 'Standard MX'}</span></div>
-          `;
-        } else if (type === 'phone') {
-          metaContainer.innerHTML = `
-            <div><span class="text-slate-500 block text-[10px]">TELECOM CARRIER</span><span class="text-brand-500">${data.carrier || isp}</span></div>
-            <div><span class="text-slate-500 block text-[10px]">LINE TYPE</span><span class="text-slate-200">${data.lineType || 'Mobile'}</span></div>
-            <div><span class="text-slate-500 block text-[10px]">COUNTRY DIALING CODE</span><span class="text-slate-200">${data.countryCode || 'N/A'}</span></div>
-          `;
-        }
+      if (type === 'ip') {
+        metaContainer.innerHTML = `
+          <div><span class="text-slate-500 block text-[10px]">PROXY / VPN FLAG</span><span class="text-emerald-400">Clean / Residential</span></div>
+          <div><span class="text-slate-500 block text-[10px]">REVERSE DNS</span><span class="text-slate-200">node-${data.ip.replace(/\./g, '-')}.net</span></div>
+          <div><span class="text-slate-500 block text-[10px]">BOTNET SCORE</span><span class="text-emerald-400">0.02 (Low)</span></div>
+        `;
+      } else if (type === 'domain') {
+        metaContainer.innerHTML = `
+          <div><span class="text-slate-500 block text-[10px]">RESOLVED SERVER IP</span><span class="text-brand-500">${data.resolvedIp}</span></div>
+          <div><span class="text-slate-500 block text-[10px]">PRIMARY MX RECORD</span><span class="text-slate-200">${data.mxRecord}</span></div>
+          <div><span class="text-slate-500 block text-[10px]">HOSTING TYPE</span><span class="text-slate-200">Cloud Infrastructure</span></div>
+        `;
+      } else if (type === 'email') {
+        metaContainer.innerHTML = `
+          <div><span class="text-slate-500 block text-[10px]">MAIL SERVER IP</span><span class="text-brand-500">${data.extractedHeaderIp}</span></div>
+          <div><span class="text-slate-500 block text-[10px]">MX GATEWAY</span><span class="text-slate-200">${data.mxRecord}</span></div>
+          <div><span class="text-slate-500 block text-[10px]">HEADER ORIGIN TRACE</span><span class="text-emerald-400">${data.extractedHeaderIp ? 'IP Extracted' : 'Standard MX'}</span></div>
+        `;
+      } else if (type === 'phone') {
+        metaContainer.innerHTML = `
+          <div><span class="text-slate-500 block text-[10px]">TELECOM CARRIER</span><span class="text-brand-500">${data.carrier}</span></div>
+          <div><span class="text-slate-500 block text-[10px]">LINE TYPE</span><span class="text-slate-200">${data.lineType}</span></div>
+          <div><span class="text-slate-500 block text-[10px]">COUNTRY DIALING CODE</span><span class="text-slate-200">${data.countryCode}</span></div>
+        `;
       }
 
-      const jsonElem = document.getElementById('jsonPayload');
-      if (jsonElem) jsonElem.textContent = JSON.stringify(data, null, 2);
+      // 6. Update Raw JSON Payload
+      document.getElementById('jsonPayload').textContent = JSON.stringify(data, null, 2);
     }
 
     /* ===================================================================
@@ -986,7 +789,6 @@ renderLocation(
 
     function renderHistory() {
       const container = document.getElementById('historyList');
-      if (!container) return;
       container.innerHTML = '';
 
       if (historyState.length === 0) {
@@ -999,8 +801,7 @@ renderLocation(
         div.className = "flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition cursor-pointer";
         div.onclick = () => {
           selectTab(h.type);
-          const input = document.getElementById('targetInput');
-          if (input) input.value = h.target;
+          document.getElementById('targetInput').value = h.target;
           performScan(h.target, h.type);
         };
         div.innerHTML = `
@@ -1040,15 +841,12 @@ renderLocation(
     function toggleJsonInspector() {
       const container = document.getElementById('jsonContainer');
       const chevron = document.getElementById('jsonChevron');
-      if (container) container.classList.toggle('hidden');
-      if (chevron) chevron.classList.toggle('rotate-180');
+      container.classList.toggle('hidden');
+      chevron.classList.toggle('rotate-180');
     }
 
     function copyJsonPayload() {
-      const jsonElem = document.getElementById('jsonPayload');
-      const jsonText = jsonElem ? jsonElem.textContent : '';
-      if (!jsonText) return;
-
+      const jsonText = document.getElementById('jsonPayload').textContent;
       navigator.clipboard.writeText(jsonText).then(() => {
         showToast('JSON Payload copied to clipboard', 'success');
       }).catch(() => {
@@ -1056,23 +854,22 @@ renderLocation(
       });
     }
 
+    /* Toast Notification Helper */
     function showToast(message, type = 'info') {
       const toast = document.getElementById('toast');
       const msg = document.getElementById('toastMsg');
       const icon = document.getElementById('toastIcon');
 
-      if (!toast || !msg) return;
-
       msg.textContent = message;
 
       if (type === 'success') {
-        if (icon) icon.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
+        icon.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
         toast.className = toast.className.replace(/border-\w+-\d+/, 'border-emerald-500');
       } else if (type === 'error') {
-        if (icon) icon.className = "fa-solid fa-circle-xmark text-rose-500 text-lg";
+        icon.className = "fa-solid fa-circle-xmark text-rose-500 text-lg";
         toast.className = toast.className.replace(/border-\w+-\d+/, 'border-rose-500');
       } else {
-        if (icon) icon.className = "fa-solid fa-circle-info text-brand-500 text-lg";
+        icon.className = "fa-solid fa-circle-info text-brand-500 text-lg";
         toast.className = toast.className.replace(/border-\w+-\d+/, 'border-brand-500');
       }
 
@@ -1082,6 +879,6 @@ renderLocation(
         toast.classList.add('translate-y-20', 'opacity-0');
       }, 3500);
     }
-</script>
+  </script>
 </body>
 </html>

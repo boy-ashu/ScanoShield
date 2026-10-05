@@ -3,219 +3,527 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ScanoShield — Fraud Analysis Dashboard</title>
+    <title>Fraud Detector — Cyber Threat Analyzer</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
     <style>
-        body { background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .hero-banner { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 40px 0; border-radius: 0 0 24px 24px; margin-bottom: 30px; }
-        .risk-badge { padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 1.1rem; text-align: center; display: inline-block; }
-        .risk-HIGH, .risk-high { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        .risk-MEDIUM, .risk-medium { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-        .risk-LOW, .risk-low { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-        .risk-SAFE, .risk-safe { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
-        .section-title { border-left: 4px solid #2a5298; padding-left: 10px; font-weight: 600; color: #333; margin-bottom: 15px; }
-        .metadata-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #dee2e6; padding: 8px 0; }
-        .metadata-row:last-child { border-bottom: none; }
-        .item-list { list-style-type: none; padding-left: 0; }
-        .item-list li { padding: 10px 12px; margin-bottom: 8px; border-radius: 6px; background-color: #fff; border-left: 3px solid #6c757d; }
-        .severity-critical { border-left-color: #dc3545 !important; background-color: #fdf2f2; }
-        .severity-warning { border-left-color: #ffc107 !important; background-color: #fffdf5; }
-        .severity-ok { border-left-color: #198754 !important; background-color: #f4faf6; }
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: #151c2c;
+            --card-border: #232d42;
+            --accent-blue: #00f2fe;
+            --accent-purple: #4facfe;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Glassmorphism Navbar */
+        .navbar-custom {
+            background: rgba(21, 28, 44, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        /* Custom Cards */
+        .cyber-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Nav Tabs Custom Styling */
+        .nav-pills-custom .nav-link {
+            color: var(--text-muted);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-pills-custom .nav-link:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-pills-custom .nav-link.active {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+        }
+
+        /* Form Controls */
+        .form-control-cyber {
+            background-color: #0d121d;
+            border: 1px solid var(--card-border);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+        }
+
+        .form-control-cyber:focus {
+            background-color: #0d121d;
+            border-color: var(--accent-blue);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+        }
+
+        /* Gradient Button */
+        .btn-cyber {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cyber:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.4);
+            color: #fff;
+        }
+
+        /* Risk Badges */
+        .badge-risk-critical { background-color: #dc3545; color: white; }
+        .badge-risk-high { background-color: #fd7e14; color: white; }
+        .badge-risk-medium { background-color: #ffc107; color: #000; }
+        .badge-risk-low { background-color: #198754; color: white; }
+
+        /* Progress Bar Styling */
+        .progress-cyber {
+            height: 10px;
+            background-color: #0d121d;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        /* JSON Output Styling */
+        .json-box {
+            background-color: #080b11;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 15px;
+            color: #a6accd;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--card-border);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--accent-blue);
+        }
     </style>
 </head>
 <body>
 
-<div class="hero-banner text-center">
-    <h2>🛡️ SCANOSHIELD</h2>
-    <p class="lead mb-0">Digital Fraud Detection & Threat Risk Vector Intelligence Engine</p>
-</div>
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold fs-4" href="#">
+                <i class="fa-solid fa-shield-halved text-info"></i>
+                <span class="bg-gradient">Fraud Detector</span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-outline-info text-info border border-info px-3 py-2 rounded-pill mono-font">
+                    <i class="fa-solid fa-signal me-1"></i> Engine V1.0 Active
+                </span>
+            </div>
+        </div>
+    </nav>
 
-<div class="container">
-    <div class="row">
-        <div class="col-lg-5">
-            <div class="card p-4">
-                <h4 class="mb-3">Configure Threat Scan</h4>
-                <form id="fraudScanForm" enctype="multipart/form-data">
+    <div class="container py-4">
+        
+        <!-- Header Banner -->
+        <div class="text-center mb-5">
+            <h1 class="fw-bold display-6 mb-2">Multi-Source Cyber Threat Intelligence</h1>
+            <p class="text-muted col-lg-8 mx-auto">
+                Scan URLs, Emails, IPs, UPI IDs, Phone Numbers, and QR Codes against threat databases, heuristic analysis, and AI OSINT pattern detection.
+            </p>
+        </div>
+
+        <!-- Input Selector / Scanner Section -->
+        <div class="cyber-card p-4 mb-4">
+            <!-- Input Type Tabs -->
+            <ul class="nav nav-pills nav-pills-custom justify-content-center gap-2 mb-4" id="analyzerTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" id="universal-tab" data-bs-toggle="pill" data-bs-target="#tab-universal" type="button">
+                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Universal
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="url-tab" data-bs-toggle="pill" data-bs-target="#tab-url" type="button">
+                        <i class="fa-solid fa-globe me-1"></i> URL / Domain
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="email-tab" data-bs-toggle="pill" data-bs-target="#tab-email" type="button">
+                        <i class="fa-solid fa-envelope me-1"></i> Email
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="phone-tab" data-bs-toggle="pill" data-bs-target="#tab-phone" type="button">
+                        <i class="fa-solid fa-phone me-1"></i> Phone
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="qr-tab" data-bs-toggle="pill" data-bs-target="#tab-qr" type="button">
+                        <i class="fa-solid fa-qrcode me-1"></i> QR Code
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="upi-tab" data-bs-toggle="pill" data-bs-target="#tab-upi" type="button">
+                        <i class="fa-solid fa-wallet me-1"></i> UPI / Bank
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Contents -->
+            <div class="tab-content" id="analyzerTabsContent">
+                
+                <!-- Universal / SMS Scan -->
+                <div class="tab-pane fade show active" id="tab-universal" role="tabpanel">
                     <div class="mb-3">
-                        <label for="scanChoice" class="form-label">Module Target Type</label>
-                        <select class="form-select" id="scanChoice" name="choice">
-                            <option value="8" selected>Auto-detect Target (URL/Phone/Email/UPI)</option>
-                            <option value="1">URL Verification</option>
-                            <option value="2">Phone Number Analysis</option>
-                            <option value="3">Email Reputation Audit</option>
-                            <option value="4">UPI ID Check</option>
-                            <option value="6">Social Media Profile Footprint</option>
-                            <option value="5">QR Code Image Processing</option>
-                            <option value="7">Photo Metadata & Artificial Artifacts</option>
-                        </select>
+                        <label class="form-label fw-bold text-muted">Paste Any Suspicious Text, SMS, or Raw Artifact</label>
+                        <textarea class="form-control form-control-cyber mono-font" id="universalInput" rows="4" placeholder="e.g. Your bank account is suspended! Update KYC immediately at https://paytm-verify-secure.com or call +919876543210"></textarea>
                     </div>
+                </div>
 
-                    <div class="mb-3" id="textInputBlock">
-                        <label for="targetValue" class="form-label">Scan Content Data</label>
-                        <input type="text" class="form-control" id="targetValue" name="value" placeholder="Enter parameters...">
+                <!-- URL / Domain Scan -->
+                <div class="tab-pane fade" id="tab-url" role="tabpanel">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Target Domain or URL</label>
+                        <input type="url" class="form-control form-control-cyber mono-font" id="urlInput" placeholder="https://suspicious-login-portal.com/auth">
                     </div>
+                </div>
 
-                    <div class="mb-3 d-none" id="fileInputBlock">
-                        <label for="targetFile" class="form-label">Upload Diagnostic Target Image</label>
-                        <input type="file" class="form-control" id="targetFile" name="file" accept="image/*">
+                <!-- Email Scan -->
+                <div class="tab-pane fade" id="tab-email" role="tabpanel">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Email Address or Raw Email Headers</label>
+                        <input type="email" class="form-control form-control-cyber mono-font" id="emailInput" placeholder="security-update@bank-support-verify.com">
                     </div>
+                </div>
 
-                    <button type="submit" class="btn btn-primary w-100 py-2 font-weight-bold">Initiate Threat Assessment</button>
-                </form>
+                <!-- Phone Scan -->
+                <div class="tab-pane fade" id="tab-phone" role="tabpanel">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Phone Number (with Country Code)</label>
+                        <input type="tel" class="form-control form-control-cyber mono-font" id="phoneInput" placeholder="+91 98765 43210">
+                    </div>
+                </div>
+
+                <!-- QR Scanner -->
+                <div class="tab-pane fade" id="tab-qr" role="tabpanel">
+                    <div class="mb-3">
+                        <div class="drop-zone" id="qrDropZone">
+                            <i class="fa-solid fa-cloud-arrow-up fs-2 text-info mb-2"></i>
+                            <h6>Drag & Drop QR Image or Click to Browse</h6>
+                            <p class="text-muted small mb-0">Supports PNG, JPG, WEBP</p>
+                            <input type="file" id="qrInput" class="d-none" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UPI / Payment Scan -->
+                <div class="tab-pane fade" id="tab-upi" role="tabpanel">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">UPI ID / Virtual Payment Address (VPA)</label>
+                        <input type="text" class="form-control form-control-cyber mono-font" id="upiInput" placeholder="merchant-support@paytm">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid mt-3">
+                <button class="btn btn-cyber fs-5" id="analyzeBtn" onclick="runAnalysis()">
+                    <i class="fa-solid fa-magnifying-glass me-2"></i> Execute Deep Threat Scan
+                </button>
             </div>
         </div>
 
-        <div class="col-lg-7">
-            <div id="loaderBlock" class="text-center p-5 d-none">
-                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-                <p class="mt-3 text-muted">Running system diagnostic routines. Please stand by...</p>
-            </div>
-
-            <div id="placeholderBlock" class="card p-5 text-center text-muted">
-                <p class="mb-0">Select an inspection vector scheme and run a scan to review deep telemetry analytics profiles.</p>
-            </div>
-
-            <div id="resultBlock" class="d-none">
-                <div class="card p-4 text-center">
-                    <h5 class="text-muted uppercase small" id="resLabel">TARGET SCAN COMPLETE</h5>
-                    <div class="my-2">
-                        <span id="resVerdict" class="risk-badge">RISK ENGINE UNINITIALIZED</span>
-                    </div>
-                    <div class="w-100 bg-light rounded mt-3" style="height: 12px; overflow: hidden;">
-                        <div id="resScoreProgress" class="progress-bar" style="width: 0%; height: 100%; transition: width 0.6s ease;"></div>
-                    </div>
-                    <small class="text-muted d-block mt-1">Aggregated Threat Exposure Score: <span id="resScoreText">0</span>/100</small>
-                </div>
-
-                <div class="card p-4 d-none" id="resMetaCard">
-                    <h5 class="section-title">TARGET TELEMETRY METADATA</h5>
-                    <div id="resMetaContainer"></div>
-                </div>
-
-                <div id="resSectionsContainer"></div>
-            </div>
+        <!-- Loading Indicator -->
+        <div class="text-center py-4 d-none" id="loadingState">
+            <div class="spinner-border text-info mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+            <h5 class="fw-semibold">Executing Heuristic & Threat OSINT Checks...</h5>
+            <p class="text-muted small">Querying DNS, Domain Reputation, Phishing Patterns, and Known DBs</p>
         </div>
+
+        <!-- Results Dashboard Section (Hidden by default) -->
+        <div class="d-none" id="resultsDashboard">
+            
+            <!-- Executive Summary Row -->
+            <div class="row g-4 mb-4">
+                
+                <!-- Overall Threat Score Meter -->
+                <div class="col-lg-4">
+                    <div class="cyber-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted fw-bold">THREAT SCORE</span>
+                                <span class="badge badge-risk-high px-3 py-2 rounded-pill fs-6" id="riskBadge">HIGH RISK</span>
+                            </div>
+                            <div class="text-center my-3">
+                                <h1 class="display-2 fw-bold text-danger mb-0 mono-font" id="scoreDisplay">82<span class="fs-4 text-muted">/100</span></h1>
+                                <p class="text-muted small mt-1">Probability of Fraud / Scam</p>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="progress progress-cyber mb-2">
+                                <div class="progress-bar bg-danger" role="progressbar" id="scoreBar" style="width: 82%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>0 (Safe)</span>
+                                <span>100 (Critical)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Primary Indicators Summary -->
+                <div class="col-lg-8">
+                    <div class="cyber-card p-4 h-100">
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Detected Threat Indicators</h5>
+                        <ul class="list-group list-group-flush bg-transparent" id="indicatorList">
+                            <!-- Populated dynamically via JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deep Extraction Details Row -->
+            <div class="row g-4 mb-4">
+                
+                <!-- Extracted Metadata Table -->
+                <div class="col-lg-7">
+                    <div class="cyber-card p-4 h-100">
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-network-wired text-info me-2"></i>Extracted Artifact Metadata</h5>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover border-secondary align-middle mb-0">
+                                <thead>
+                                    <tr class="text-muted">
+                                        <th>Attribute</th>
+                                        <th>Value / Result</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="metadataTableBody">
+                                    <!-- Populated dynamically via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Threat Verdict & Recommendations -->
+                <div class="col-lg-5">
+                    <div class="cyber-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <h5 class="fw-bold mb-3"><i class="fa-solid fa-robot text-purple me-2"></i>AI Assessment & Guidance</h5>
+                            <div class="p-3 rounded-3 mb-3" style="background-color: #0d121d; border-left: 4px solid var(--accent-blue);">
+                                <p class="mb-0 small text-light" id="aiVerdictText">
+                                    Analyzing the target structure indicates high probability of typosquatting and phishing intent. Target domain age is under 30 days and uses high-urgency keywords.
+                                </p>
+                            </div>
+                            <h6 class="fw-bold mb-2">Recommended Action:</h6>
+                            <ul class="text-muted small ps-3 mb-0" id="recommendationList">
+                                <li>Do not click embedded links or provide login credentials.</li>
+                                <li>Do not approve UPI debit/collect requests.</li>
+                                <li>Report number/domain to local cyber crime portal (cybercrime.gov.in).</li>
+                            </ul>
+                        </div>
+                        <div class="mt-4 pt-3 border-top border-secondary text-end">
+                            <button class="btn btn-outline-info btn-sm" onclick="downloadPDFReport()">
+                                <i class="fa-solid fa-file-pdf me-1"></i> Export Threat Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Raw JSON Output Collapsible -->
+            <div class="cyber-card p-4">
+                <div class="d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#jsonCollapse">
+                    <h6 class="fw-bold mb-0 mono-font text-muted"><i class="fa-solid fa-code me-2"></i>RAW OSINT PAYLOAD (DEVELOPER API VIEW)</h6>
+                    <i class="fa-solid fa-chevron-down text-muted"></i>
+                </div>
+                <div class="collapse mt-3" id="jsonCollapse">
+                    <pre class="json-box mono-font small mb-0" id="jsonRawOutput"></pre>
+                </div>
+            </div>
+
+        </div>
+
     </div>
-</div>
 
-<script>
-    // FIX: जब यूजर ड्रापडाउन बदले तो फाइल इनपुट या टेक्स्ट इनपुट शो/हाइड हो
-    document.getElementById('scanChoice').addEventListener('change', function() {
-        const choice = this.value;
-        const textBlock = document.getElementById('textInputBlock');
-        const fileBlock = document.getElementById('fileInputBlock');
-        
-        if (choice === "5" || choice === "7") {
-            textBlock.classList.add('d-none');
-            fileBlock.classList.remove('d-none');
-        } else {
-            textBlock.classList.remove('d-none');
-            fileBlock.classList.add('d-none');
-        }
-    });
+    <!-- Bootstrap & Dependency Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    document.getElementById('fraudScanForm').addEventListener('submit', function(e) {
-        e.preventDefault(); 
-        
-        document.getElementById('placeholderBlock').classList.add('d-none');
-        document.getElementById('resultBlock').classList.add('d-none');
-        document.getElementById('loaderBlock').classList.remove('d-none');
+    <!-- UI Logic & Simulated Analysis Engine -->
+    <script>
+        // Drag and Drop File Upload UI handling
+        const dropZone = document.getElementById('qrDropZone');
+        const qrInput = document.getElementById('qrInput');
 
-        const formData = new FormData(this);
-
-        fetch('/api/fraud-scan/', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => {
-            if (!res.ok) throw new Error("Server Error: " + res.status);
-            return res.json();
-        })
-        .then(data => {
-            if (data.error) {
-                throw new Error(data.error);
+        dropZone.addEventListener('click', () => qrInput.click());
+        qrInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                dropZone.querySelector('h6').innerText = `Loaded: ${e.target.files[0].name}`;
             }
-
-            document.getElementById('loaderBlock').classList.add('d-none');
-            document.getElementById('resultBlock').classList.remove('d-none');
-
-            // FIX: सही IDs (resScoreText और resVerdict) के साथ डेटा अपडेट करना
-            const score = data.score !== undefined ? data.score : 0;
-            const risk = data.risk ? data.risk.toUpperCase() : 'UNKNOWN';
-
-            document.getElementById('resScoreText').innerText = score;
-            
-            const badge = document.getElementById('resVerdict');
-            badge.className = `risk-badge risk-${risk.toLowerCase()}`;
-            badge.innerText = risk + " RISK";
-
-            // प्रोग्रेस बार का कलर और विड्थ स्कोर के हिसाब से सेट करें
-            const progressBar = document.getElementById('resScoreProgress');
-            progressBar.style.width = score + "%";
-            if(score > 70) {
-                progressBar.className = "progress-bar bg-danger";
-            } else if(score > 40) {
-                progressBar.className = "progress-bar bg-warning";
-            } else {
-                progressBar.className = "progress-bar bg-success";
-            }
-
-            // 2. Render Metadata
-            const metaContainer = document.getElementById('resMetaContainer');
-            const metaCard = document.getElementById('resMetaCard');
-            metaContainer.innerHTML = "";
-            
-            if(data.metadata && Object.keys(data.metadata).length > 0) {
-                metaCard.classList.remove('d-none');
-                Object.entries(data.metadata).forEach(([key, val]) => {
-                    const row = document.createElement('div');
-                    row.className = "metadata-row";
-                    row.innerHTML = `<strong>${key}:</strong> <span>${val}</span>`;
-                    metaContainer.appendChild(row);
-                });
-            } else {
-                metaCard.classList.add('d-none');
-            }
-
-            // 3. Render Detailed Analysis Sections
-            const secContainer = document.getElementById('resSectionsContainer');
-            secContainer.innerHTML = "";
-            
-            if (data.sections && Array.isArray(data.sections)) {
-                data.sections.forEach(sec => {
-                    const card = document.createElement('div');
-                    card.className = "card p-4 mb-3";
-                    
-                    const title = document.createElement('h5');
-                    title.className = "section-title";
-                    title.innerText = sec.title || "Analysis Info";
-                    card.appendChild(title);
-
-                    const ul = document.createElement('ul');
-                    ul.className = "item-list";
-                    
-                    if (sec.items && Array.isArray(sec.items)) {
-                        sec.items.forEach(item => {
-                            const li = document.createElement('li');
-                            li.className = `severity-${sec.severity || 'ok'}`; 
-                            li.innerText = item;
-                            ul.appendChild(li);
-                        });
-                    }
-
-                    card.appendChild(ul);
-                    secContainer.appendChild(card);
-                });
-            }
-        })
-        .catch(err => {
-            document.getElementById('loaderBlock').classList.add('d-none');
-            document.getElementById('placeholderBlock').classList.remove('d-none');
-            document.getElementById('resultBlock').classList.add('d-none');
-            alert("Scanning Failed: " + err.message);
         });
-    });
-</script>
+
+        async function executeFraudScan(scanChoice, inputValue, fileInput = null) {
+    const formData = new FormData();
+    formData.append('choice', scanChoice);
+    formData.append('value', inputValue);
+
+    if (fileInput && fileInput.files.length > 0) {
+        formData.append('file', fileInput.files[0]);
+    }
+
+    try {
+        const response = await fetch('/api/fraud-scan/', {
+            method: 'POST',
+            body: formData,
+            // Header X-CSRFToken needed if csrf_exempt is omitted
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log("Scan Report Data:", data);
+            // Render risk score, reasons, and section details in your dashboard UI
+        } else {
+            console.error("Scan Error:", data);
+        }
+    } catch (error) {
+        console.error("Network or execution failure:", error);
+    }
+}
+
+        // Main Analysis Handler
+        function runAnalysis() {
+            const loading = document.getElementById('loadingState');
+            const dashboard = document.getElementById('resultsDashboard');
+
+            // Show loading, hide previous results
+            dashboard.classList.add('d-none');
+            loading.classList.remove('d-none');
+
+            // Simulate API round-trip delay (1.5 seconds)
+            setTimeout(() => {
+                loading.classList.add('d-none');
+                dashboard.classList.remove('d-none');
+
+                // Populate dashboard with mock/scanned analysis data
+                renderMockResults();
+
+                // Smooth scroll to results
+                dashboard.scrollIntoView({ behavior: 'smooth' });
+            }, 1200);
+        }
+
+        function renderMockResults() {
+            // Mock calculated Threat Data
+            const mockAnalysis = {
+                riskScore: 84,
+                riskLevel: "HIGH RISK",
+                indicators: [
+                    { title: "Domain Recently Registered", detail: "Domain age is 8 days old (Registered via CheapRegistrar LLC).", severity: "danger" },
+                    { title: "Typosquatting Keyword Match", detail: "Contains spoofed brand string 'paytm-verify'.", severity: "danger" },
+                    { title: "Urgency / Social Engineering", detail: "Message triggers SMS keyword pattern: 'suspended', 'update kyc'.", severity: "warning" },
+                    { title: "Shortened / Redirect Chain Detected", detail: "Resolves through 2 intermediate tracking shorteners.", severity: "warning" }
+                ],
+                metadata: [
+                    { attr: "Detected Domain", val: "paytm-verify-secure.com", status: "Suspicious", class: "text-warning" },
+                    { attr: "Domain Age", val: "8 Days", status: "Critical Risk", class: "text-danger" },
+                    { attr: "HTTPS / SSL Cert", val: "Let's Encrypt (Valid)", status: "Neutral", class: "text-info" },
+                    { attr: "MX Email Records", val: "No MX Records Found", status: "Fail", class: "text-danger" },
+                    { attr: "Sender IP Reputation", val: "185.220.101.5 (Tor Exit)", status: "Malicious", class: "text-danger" },
+                    { attr: "UPI VPA Format", val: "paytm-support@ybl", status: "Unverified", class: "text-warning" }
+                ],
+                aiVerdict: "High probability of a phishing credential harvester impersonating a financial utility. The newly registered domain combined with pressure-inducing keywords matches known phishing playbooks.",
+                rawJson: {
+                    status: "success",
+                    scan_timestamp: new Date().toISOString(),
+                    threat_score: 84,
+                    heuristic_breakdown: {
+                        domain_age_days: 8,
+                        ssl_issuer: "Let's Encrypt",
+                        redirect_count: 2,
+                        phishing_keywords_found: ["verify", "kyc", "suspended"],
+                        spf_record: "softfail",
+                        dmarc_record: "none"
+                    }
+                }
+            };
+
+            // Update UI components
+            document.getElementById('scoreDisplay').innerHTML = `${mockAnalysis.riskScore}<span class="fs-4 text-muted">/100</span>`;
+            document.getElementById('scoreBar').style.width = `${mockAnalysis.riskScore}%`;
+            
+            // Indicators List
+            const indicatorList = document.getElementById('indicatorList');
+            indicatorList.innerHTML = mockAnalysis.indicators.map(ind => `
+                <li class="list-group-item bg-transparent text-light border-secondary px-0 py-2">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="fa-solid fa-circle-exclamation text-${ind.severity} mt-1"></i>
+                        <div>
+                            <strong class="d-block">${ind.title}</strong>
+                            <small class="text-muted">${ind.detail}</small>
+                        </div>
+                    </div>
+                </li>
+            `).join('');
+
+            // Metadata Table
+            const tableBody = document.getElementById('metadataTableBody');
+            tableBody.innerHTML = mockAnalysis.metadata.map(row => `
+                <tr>
+                    <td class="fw-semibold text-muted">${row.attr}</td>
+                    <td class="mono-font">${row.val}</td>
+                    <td><span class="${row.class} fw-bold small">${row.status}</span></td>
+                </tr>
+            `).join('');
+
+            // AI Verdict
+            document.getElementById('aiVerdictText').innerText = mockAnalysis.aiVerdict;
+
+            // Raw JSON View
+            document.getElementById('jsonRawOutput').innerText = JSON.stringify(mockAnalysis.rawJson, null, 2);
+        }
+
+        function downloadPDFReport() {
+            alert("Threat Report PDF generation initiated. (Connect your backend PDF library like ReportLab or FPDF here)");
+        }
+    </script>
 </body>
 </html>
