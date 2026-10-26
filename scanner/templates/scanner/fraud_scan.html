@@ -103,10 +103,10 @@
         }
 
         /* Risk Badges */
-        .badge-risk-critical { background-color: #dc3545; color: white; }
-        .badge-risk-high { background-color: #fd7e14; color: white; }
-        .badge-risk-medium { background-color: #ffc107; color: #000; }
-        .badge-risk-low { background-color: #198754; color: white; }
+        .badge-risk-high { background-color: #dc3545; color: white; }
+        .badge-risk-medium { background-color: #fd7e14; color: white; }
+        .badge-risk-low { background-color: #ffc107; color: #000; }
+        .badge-risk-safe { background-color: #198754; color: white; }
 
         /* Progress Bar Styling */
         .progress-cyber {
@@ -152,7 +152,7 @@
             </a>
             <div class="d-flex align-items-center gap-3">
                 <span class="badge bg-outline-info text-info border border-info px-3 py-2 rounded-pill mono-font">
-                    <i class="fa-solid fa-signal me-1"></i> Engine V1.0 Active
+                    <i class="fa-solid fa-signal me-1"></i> Engine Active
                 </span>
             </div>
         </div>
@@ -164,7 +164,7 @@
         <div class="text-center mb-5">
             <h1 class="fw-bold display-6 mb-2">Multi-Source Cyber Threat Intelligence</h1>
             <p class="text-muted col-lg-8 mx-auto">
-                Scan URLs, Emails, IPs, UPI IDs, Phone Numbers, and QR Codes against threat databases, heuristic analysis, and AI OSINT pattern detection.
+                Scan URLs, Emails, Phone Numbers, UPI IDs, QR Codes, and Social Profiles using backend threat heuristics.
             </p>
         </div>
 
@@ -194,7 +194,7 @@
                 </li>
                 <li class="nav-item">
                     <button class="nav-link" id="qr-tab" data-bs-toggle="pill" data-bs-target="#tab-qr" type="button">
-                        <i class="fa-solid fa-qrcode me-1"></i> QR Code
+                        <i class="fa-solid fa-qrcode me-1"></i> QR Code / Image
                     </button>
                 </li>
                 <li class="nav-item">
@@ -202,32 +202,37 @@
                         <i class="fa-solid fa-wallet me-1"></i> UPI / Bank
                     </button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="social-tab" data-bs-toggle="pill" data-bs-target="#tab-social" type="button">
+                        <i class="fa-solid fa-hashtag me-1"></i> Social Media
+                    </button>
+                </li>
             </ul>
 
             <!-- Tab Contents -->
             <div class="tab-content" id="analyzerTabsContent">
                 
-                <!-- Universal / SMS Scan -->
+                <!-- Universal Scan -->
                 <div class="tab-pane fade show active" id="tab-universal" role="tabpanel">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-muted">Paste Any Suspicious Text, SMS, or Raw Artifact</label>
-                        <textarea class="form-control form-control-cyber mono-font" id="universalInput" rows="4" placeholder="e.g. Your bank account is suspended! Update KYC immediately at https://paytm-verify-secure.com or call +919876543210"></textarea>
+                        <label class="form-label fw-bold text-muted">Paste Any URL, Phone, Email, or UPI ID</label>
+                        <textarea class="form-control form-control-cyber mono-font" id="universalInput" rows="3" placeholder="Enter target to auto-detect and scan..."></textarea>
                     </div>
                 </div>
 
-                <!-- URL / Domain Scan -->
+                <!-- URL Scan -->
                 <div class="tab-pane fade" id="tab-url" role="tabpanel">
                     <div class="mb-3">
                         <label class="form-label fw-bold text-muted">Target Domain or URL</label>
-                        <input type="url" class="form-control form-control-cyber mono-font" id="urlInput" placeholder="https://suspicious-login-portal.com/auth">
+                        <input type="url" class="form-control form-control-cyber mono-font" id="urlInput" placeholder="https://example.com">
                     </div>
                 </div>
 
                 <!-- Email Scan -->
                 <div class="tab-pane fade" id="tab-email" role="tabpanel">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-muted">Email Address or Raw Email Headers</label>
-                        <input type="email" class="form-control form-control-cyber mono-font" id="emailInput" placeholder="security-update@bank-support-verify.com">
+                        <label class="form-label fw-bold text-muted">Email Address</label>
+                        <input type="email" class="form-control form-control-cyber mono-font" id="emailInput" placeholder="user@example.com">
                     </div>
                 </div>
 
@@ -235,7 +240,7 @@
                 <div class="tab-pane fade" id="tab-phone" role="tabpanel">
                     <div class="mb-3">
                         <label class="form-label fw-bold text-muted">Phone Number (with Country Code)</label>
-                        <input type="tel" class="form-control form-control-cyber mono-font" id="phoneInput" placeholder="+91 98765 43210">
+                        <input type="tel" class="form-control form-control-cyber mono-font" id="phoneInput" placeholder="+919876543210">
                     </div>
                 </div>
 
@@ -244,18 +249,26 @@
                     <div class="mb-3">
                         <div class="drop-zone" id="qrDropZone">
                             <i class="fa-solid fa-cloud-arrow-up fs-2 text-info mb-2"></i>
-                            <h6>Drag & Drop QR Image or Click to Browse</h6>
+                            <h6 id="fileSelectText">Drag & Drop QR Code Image or Click to Browse</h6>
                             <p class="text-muted small mb-0">Supports PNG, JPG, WEBP</p>
                             <input type="file" id="qrInput" class="d-none" accept="image/*">
                         </div>
                     </div>
                 </div>
 
-                <!-- UPI / Payment Scan -->
+                <!-- UPI Scan -->
                 <div class="tab-pane fade" id="tab-upi" role="tabpanel">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-muted">UPI ID / Virtual Payment Address (VPA)</label>
-                        <input type="text" class="form-control form-control-cyber mono-font" id="upiInput" placeholder="merchant-support@paytm">
+                        <label class="form-label fw-bold text-muted">UPI ID / Virtual Payment Address</label>
+                        <input type="text" class="form-control form-control-cyber mono-font" id="upiInput" placeholder="name@okaxis">
+                    </div>
+                </div>
+
+                <!-- Social Scan -->
+                <div class="tab-pane fade" id="tab-social" role="tabpanel">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Social Profile Username or Link</label>
+                        <input type="text" class="form-control form-control-cyber mono-font" id="socialInput" placeholder="@username or https://instagram.com/username">
                     </div>
                 </div>
 
@@ -272,32 +285,31 @@
         <!-- Loading Indicator -->
         <div class="text-center py-4 d-none" id="loadingState">
             <div class="spinner-border text-info mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
-            <h5 class="fw-semibold">Executing Heuristic & Threat OSINT Checks...</h5>
-            <p class="text-muted small">Querying DNS, Domain Reputation, Phishing Patterns, and Known DBs</p>
+            <h5 class="fw-semibold">Executing Heuristic Analysis...</h5>
+            <p class="text-muted small">Connecting to ScanoShield API backend</p>
         </div>
 
-        <!-- Results Dashboard Section (Hidden by default) -->
+        <!-- Results Dashboard Section -->
         <div class="d-none" id="resultsDashboard">
             
-            <!-- Executive Summary Row -->
             <div class="row g-4 mb-4">
                 
-                <!-- Overall Threat Score Meter -->
+                <!-- Threat Score -->
                 <div class="col-lg-4">
                     <div class="cyber-card p-4 h-100 d-flex flex-column justify-content-between">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span class="text-muted fw-bold">THREAT SCORE</span>
-                                <span class="badge badge-risk-high px-3 py-2 rounded-pill fs-6" id="riskBadge">HIGH RISK</span>
+                                <span class="badge px-3 py-2 rounded-pill fs-6" id="riskBadge">SAFE</span>
                             </div>
                             <div class="text-center my-3">
-                                <h1 class="display-2 fw-bold text-danger mb-0 mono-font" id="scoreDisplay">82<span class="fs-4 text-muted">/100</span></h1>
-                                <p class="text-muted small mt-1">Probability of Fraud / Scam</p>
+                                <h1 class="display-2 fw-bold mb-0 mono-font" id="scoreDisplay">0<span class="fs-4 text-muted">/100</span></h1>
+                                <p class="text-muted small mt-1">Calculated Risk Score</p>
                             </div>
                         </div>
                         <div>
                             <div class="progress progress-cyber mb-2">
-                                <div class="progress-bar bg-danger" role="progressbar" id="scoreBar" style="width: 82%"></div>
+                                <div class="progress-bar" role="progressbar" id="scoreBar" style="width: 0%"></div>
                             </div>
                             <div class="d-flex justify-content-between small text-muted">
                                 <span>0 (Safe)</span>
@@ -307,72 +319,53 @@
                     </div>
                 </div>
 
-                <!-- Primary Indicators Summary -->
+                <!-- Threat Reasons -->
                 <div class="col-lg-8">
                     <div class="cyber-card p-4 h-100">
-                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Detected Threat Indicators</h5>
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Threat Findings & Reasons</h5>
                         <ul class="list-group list-group-flush bg-transparent" id="indicatorList">
-                            <!-- Populated dynamically via JavaScript -->
                         </ul>
                     </div>
                 </div>
             </div>
 
-            <!-- Deep Extraction Details Row -->
+            <!-- Detailed Analysis Sections -->
             <div class="row g-4 mb-4">
                 
-                <!-- Extracted Metadata Table -->
+                <!-- Extracted Metadata -->
                 <div class="col-lg-7">
                     <div class="cyber-card p-4 h-100">
-                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-network-wired text-info me-2"></i>Extracted Artifact Metadata</h5>
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-network-wired text-info me-2"></i>Extracted Target Metadata</h5>
                         <div class="table-responsive">
                             <table class="table table-dark table-hover border-secondary align-middle mb-0">
                                 <thead>
                                     <tr class="text-muted">
                                         <th>Attribute</th>
-                                        <th>Value / Result</th>
-                                        <th>Status</th>
+                                        <th>Extracted Value</th>
                                     </tr>
                                 </thead>
                                 <tbody id="metadataTableBody">
-                                    <!-- Populated dynamically via JavaScript -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- AI Threat Verdict & Recommendations -->
+                <!-- Section Details -->
                 <div class="col-lg-5">
-                    <div class="cyber-card p-4 h-100 d-flex flex-column justify-content-between">
-                        <div>
-                            <h5 class="fw-bold mb-3"><i class="fa-solid fa-robot text-purple me-2"></i>AI Assessment & Guidance</h5>
-                            <div class="p-3 rounded-3 mb-3" style="background-color: #0d121d; border-left: 4px solid var(--accent-blue);">
-                                <p class="mb-0 small text-light" id="aiVerdictText">
-                                    Analyzing the target structure indicates high probability of typosquatting and phishing intent. Target domain age is under 30 days and uses high-urgency keywords.
-                                </p>
-                            </div>
-                            <h6 class="fw-bold mb-2">Recommended Action:</h6>
-                            <ul class="text-muted small ps-3 mb-0" id="recommendationList">
-                                <li>Do not click embedded links or provide login credentials.</li>
-                                <li>Do not approve UPI debit/collect requests.</li>
-                                <li>Report number/domain to local cyber crime portal (cybercrime.gov.in).</li>
-                            </ul>
-                        </div>
-                        <div class="mt-4 pt-3 border-top border-secondary text-end">
-                            <button class="btn btn-outline-info btn-sm" onclick="downloadPDFReport()">
-                                <i class="fa-solid fa-file-pdf me-1"></i> Export Threat Report
-                            </button>
+                    <div class="cyber-card p-4 h-100">
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-shield text-purple me-2"></i>Audit Sections</h5>
+                        <div id="sectionContainer" class="d-flex flex-column gap-3 overflow-auto" style="max-height: 350px;">
                         </div>
                     </div>
                 </div>
 
             </div>
 
-            <!-- Raw JSON Output Collapsible -->
+            <!-- Raw JSON Collapsible -->
             <div class="cyber-card p-4">
                 <div class="d-flex justify-content-between align-items-center cursor-pointer" data-bs-toggle="collapse" data-bs-target="#jsonCollapse">
-                    <h6 class="fw-bold mb-0 mono-font text-muted"><i class="fa-solid fa-code me-2"></i>RAW OSINT PAYLOAD (DEVELOPER API VIEW)</h6>
+                    <h6 class="fw-bold mb-0 mono-font text-muted"><i class="fa-solid fa-code me-2"></i>RAW API RESPONSE DATA</h6>
                     <i class="fa-solid fa-chevron-down text-muted"></i>
                 </div>
                 <div class="collapse mt-3" id="jsonCollapse">
@@ -384,145 +377,157 @@
 
     </div>
 
-    <!-- Bootstrap & Dependency Scripts -->
+    <!-- Bootstrap Script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- UI Logic & Simulated Analysis Engine -->
     <script>
-        // Drag and Drop File Upload UI handling
+        // File drop zone setup
         const dropZone = document.getElementById('qrDropZone');
         const qrInput = document.getElementById('qrInput');
 
         dropZone.addEventListener('click', () => qrInput.click());
         qrInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                dropZone.querySelector('h6').innerText = `Loaded: ${e.target.files[0].name}`;
+                document.getElementById('fileSelectText').innerText = `Selected File: ${e.target.files[0].name}`;
             }
         });
 
-        async function executeFraudScan(scanChoice, inputValue, fileInput = null) {
-    const formData = new FormData();
-    formData.append('choice', scanChoice);
-    formData.append('value', inputValue);
-
-    if (fileInput && fileInput.files.length > 0) {
-        formData.append('file', fileInput.files[0]);
-    }
-
-    try {
-        const response = await fetch('/api/fraud-scan/', {
-            method: 'POST',
-            body: formData,
-            // Header X-CSRFToken needed if csrf_exempt is omitted
-        });
-
-        const data = await response.json();
-        
-        if (response.ok) {
-            console.log("Scan Report Data:", data);
-            // Render risk score, reasons, and section details in your dashboard UI
-        } else {
-            console.error("Scan Error:", data);
-        }
-    } catch (error) {
-        console.error("Network or execution failure:", error);
-    }
-}
-
-        // Main Analysis Handler
-        function runAnalysis() {
+        // Main analysis API dispatcher
+        async function runAnalysis() {
             const loading = document.getElementById('loadingState');
             const dashboard = document.getElementById('resultsDashboard');
 
-            // Show loading, hide previous results
+            // Find active input tab
+            const activeTab = document.querySelector('#analyzerTabs .nav-link.active').id;
+            let choice = "8";
+            let value = "";
+            let fileInput = null;
+
+            if (activeTab === 'universal-tab') { choice = "8"; value = document.getElementById('universalInput').value.trim(); }
+            else if (activeTab === 'url-tab') { choice = "1"; value = document.getElementById('urlInput').value.trim(); }
+            else if (activeTab === 'phone-tab') { choice = "2"; value = document.getElementById('phoneInput').value.trim(); }
+            else if (activeTab === 'email-tab') { choice = "3"; value = document.getElementById('emailInput').value.trim(); }
+            else if (activeTab === 'upi-tab') { choice = "4"; value = document.getElementById('upiInput').value.trim(); }
+            else if (activeTab === 'qr-tab') { choice = "5"; fileInput = document.getElementById('qrInput'); }
+            else if (activeTab === 'social-tab') { choice = "6"; value = document.getElementById('socialInput').value.trim(); }
+
+            if (!value && (!fileInput || fileInput.files.length === 0)) {
+                alert("Please enter a target value or select a file to scan.");
+                return;
+            }
+
             dashboard.classList.add('d-none');
             loading.classList.remove('d-none');
 
-            // Simulate API round-trip delay (1.5 seconds)
-            setTimeout(() => {
+            const formData = new FormData();
+            formData.append('choice', choice);
+            formData.append('value', value);
+            if (fileInput && fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            }
+
+            try {
+                const response = await fetch('/api/fraud-scan/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
                 loading.classList.add('d-none');
-                dashboard.classList.remove('d-none');
 
-                // Populate dashboard with mock/scanned analysis data
-                renderMockResults();
-
-                // Smooth scroll to results
-                dashboard.scrollIntoView({ behavior: 'smooth' });
-            }, 1200);
-        }
-
-        function renderMockResults() {
-            // Mock calculated Threat Data
-            const mockAnalysis = {
-                riskScore: 84,
-                riskLevel: "HIGH RISK",
-                indicators: [
-                    { title: "Domain Recently Registered", detail: "Domain age is 8 days old (Registered via CheapRegistrar LLC).", severity: "danger" },
-                    { title: "Typosquatting Keyword Match", detail: "Contains spoofed brand string 'paytm-verify'.", severity: "danger" },
-                    { title: "Urgency / Social Engineering", detail: "Message triggers SMS keyword pattern: 'suspended', 'update kyc'.", severity: "warning" },
-                    { title: "Shortened / Redirect Chain Detected", detail: "Resolves through 2 intermediate tracking shorteners.", severity: "warning" }
-                ],
-                metadata: [
-                    { attr: "Detected Domain", val: "paytm-verify-secure.com", status: "Suspicious", class: "text-warning" },
-                    { attr: "Domain Age", val: "8 Days", status: "Critical Risk", class: "text-danger" },
-                    { attr: "HTTPS / SSL Cert", val: "Let's Encrypt (Valid)", status: "Neutral", class: "text-info" },
-                    { attr: "MX Email Records", val: "No MX Records Found", status: "Fail", class: "text-danger" },
-                    { attr: "Sender IP Reputation", val: "185.220.101.5 (Tor Exit)", status: "Malicious", class: "text-danger" },
-                    { attr: "UPI VPA Format", val: "paytm-support@ybl", status: "Unverified", class: "text-warning" }
-                ],
-                aiVerdict: "High probability of a phishing credential harvester impersonating a financial utility. The newly registered domain combined with pressure-inducing keywords matches known phishing playbooks.",
-                rawJson: {
-                    status: "success",
-                    scan_timestamp: new Date().toISOString(),
-                    threat_score: 84,
-                    heuristic_breakdown: {
-                        domain_age_days: 8,
-                        ssl_issuer: "Let's Encrypt",
-                        redirect_count: 2,
-                        phishing_keywords_found: ["verify", "kyc", "suspended"],
-                        spf_record: "softfail",
-                        dmarc_record: "none"
-                    }
+                if (response.ok) {
+                    dashboard.classList.remove('d-none');
+                    renderBackendResults(data);
+                    dashboard.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert(data.reasons ? data.reasons.join('\n') : "Scan failed.");
                 }
-            };
-
-            // Update UI components
-            document.getElementById('scoreDisplay').innerHTML = `${mockAnalysis.riskScore}<span class="fs-4 text-muted">/100</span>`;
-            document.getElementById('scoreBar').style.width = `${mockAnalysis.riskScore}%`;
-            
-            // Indicators List
-            const indicatorList = document.getElementById('indicatorList');
-            indicatorList.innerHTML = mockAnalysis.indicators.map(ind => `
-                <li class="list-group-item bg-transparent text-light border-secondary px-0 py-2">
-                    <div class="d-flex align-items-start gap-2">
-                        <i class="fa-solid fa-circle-exclamation text-${ind.severity} mt-1"></i>
-                        <div>
-                            <strong class="d-block">${ind.title}</strong>
-                            <small class="text-muted">${ind.detail}</small>
-                        </div>
-                    </div>
-                </li>
-            `).join('');
-
-            // Metadata Table
-            const tableBody = document.getElementById('metadataTableBody');
-            tableBody.innerHTML = mockAnalysis.metadata.map(row => `
-                <tr>
-                    <td class="fw-semibold text-muted">${row.attr}</td>
-                    <td class="mono-font">${row.val}</td>
-                    <td><span class="${row.class} fw-bold small">${row.status}</span></td>
-                </tr>
-            `).join('');
-
-            // AI Verdict
-            document.getElementById('aiVerdictText').innerText = mockAnalysis.aiVerdict;
-
-            // Raw JSON View
-            document.getElementById('jsonRawOutput').innerText = JSON.stringify(mockAnalysis.rawJson, null, 2);
+            } catch (error) {
+                loading.classList.add('d-none');
+                alert("Server Connection Error: " + error);
+            }
         }
 
-        function downloadPDFReport() {
-            alert("Threat Report PDF generation initiated. (Connect your backend PDF library like ReportLab or FPDF here)");
+        function renderBackendResults(data) {
+            // Render Score and Risk Badge
+            const score = data.score || 0;
+            const risk = data.risk || "SAFE";
+
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            scoreDisplay.innerHTML = `${score}<span class="fs-4 text-muted">/100</span>`;
+            
+            const scoreBar = document.getElementById('scoreBar');
+            scoreBar.style.width = `${score}%`;
+
+            const riskBadge = document.getElementById('riskBadge');
+            riskBadge.innerText = `${risk} RISK`;
+
+            if (risk === "HIGH") {
+                riskBadge.className = "badge px-3 py-2 rounded-pill fs-6 badge-risk-high";
+                scoreBar.className = "progress-bar bg-danger";
+                scoreDisplay.className = "display-2 fw-bold mb-0 mono-font text-danger";
+            } else if (risk === "MEDIUM") {
+                riskBadge.className = "badge px-3 py-2 rounded-pill fs-6 badge-risk-medium";
+                scoreBar.className = "progress-bar bg-warning";
+                scoreDisplay.className = "display-2 fw-bold mb-0 mono-font text-warning";
+            } else if (risk === "LOW") {
+                riskBadge.className = "badge px-3 py-2 rounded-pill fs-6 badge-risk-low";
+                scoreBar.className = "progress-bar bg-info";
+                scoreDisplay.className = "display-2 fw-bold mb-0 mono-font text-info";
+            } else {
+                riskBadge.className = "badge px-3 py-2 rounded-pill fs-6 badge-risk-safe";
+                scoreBar.className = "progress-bar bg-success";
+                scoreDisplay.className = "display-2 fw-bold mb-0 mono-font text-success";
+            }
+
+            // Render Reasons List
+            const indicatorList = document.getElementById('indicatorList');
+            if (data.reasons && data.reasons.length > 0) {
+                indicatorList.innerHTML = data.reasons.map(reason => `
+                    <li class="list-group-item bg-transparent text-light border-secondary px-0 py-2">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="fa-solid fa-circle-exclamation text-warning mt-1"></i>
+                            <div>
+                                <span class="small">${reason}</span>
+                            </div>
+                        </div>
+                    </li>
+                `).join('');
+            } else {
+                indicatorList.innerHTML = `<li class="list-group-item bg-transparent text-muted px-0 py-2">No specific threat flags raised.</li>`;
+            }
+
+            // Render Metadata Table
+            const tableBody = document.getElementById('metadataTableBody');
+            const metaEntries = Object.entries(data.metadata || {});
+            if (metaEntries.length > 0) {
+                tableBody.innerHTML = metaEntries.map(([key, val]) => `
+                    <tr>
+                        <td class="fw-semibold text-muted">${key}</td>
+                        <td class="mono-font">${val}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tableBody.innerHTML = `<tr><td colspan="2" class="text-muted">No metadata available for this artifact.</td></tr>`;
+            }
+
+            // Render Audit Sections
+            const sectionContainer = document.getElementById('sectionContainer');
+            if (data.sections && data.sections.length > 0) {
+                sectionContainer.innerHTML = data.sections.map(sec => `
+                    <div class="p-3 rounded-3" style="background-color: #0d121d; border-left: 3px solid var(--accent-blue);">
+                        <h6 class="fw-bold mb-2 text-info">${sec.title}</h6>
+                        <ul class="mb-0 ps-3 text-muted small">
+                            ${sec.items.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            } else {
+                sectionContainer.innerHTML = `<p class="text-muted small">No section breakdown available.</p>`;
+            }
+
+            // Render Raw JSON
+            document.getElementById('jsonRawOutput').innerText = JSON.stringify(data, null, 2);
         }
     </script>
 </body>

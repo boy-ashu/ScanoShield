@@ -4,7 +4,7 @@ import sys
 import whois
 from urllib.parse import urlparse
 from datetime import datetime
-import django
+from .models import ReportedSpamNumber
 
 try:
     from pyzbar.pyzbar import decode
@@ -22,7 +22,9 @@ except Exception:
 
 from PIL import Image
 import piexif
-
+import requests
+import phonenumbers
+from phonenumbers import carrier, number_type
 # ══════════════════════════════════════════════════════════════════
 #  Constants for Social Media Scanner
 # ══════════════════════════════════════════════════════════════════
@@ -62,15 +64,23 @@ SOCIAL_PLATFORMS = {
 # ══════════════════════════════════════════════════════════════════
 #  Result builder  ─  carries structured sections for rich display
 # ══════════════════════════════════════════════════════════════════
-
+def check_line_type(cleaned_number):
+    """Detects if a number is Mobile, Landline, or VoIP/Virtual."""
+    try:
+        parsed = phonenumbers.parse(cleaned_number)
+        line_type = number_type(parsed)
+        
+        # phonenumbers.PhoneNumberType.VOIP or PAGER are high risk
+        if line_type == phonenumbers.PhoneNumberType.VOIP:
+            return "VOIP", 40, "🚨 VOIP / Virtual Number: Scammers heavily use internet-based virtual numbers to hide their identity."
+        elif line_type == phonenumbers.PhoneNumberType.FIXED_LINE_OR_MOBILE:
+            return "MOBILE/FIXED", 0, "✅ Standard mobile or fixed-line carrier."
+        else:
+            return "OTHER", 15, "⚠️ Non-standard line type detected."
+    except Exception:
+        return "UNKNOWN", 10, "ℹ️ Could not verify carrier line type."
+    
 def _build_result(score, reasons, sections=None, metadata=None):
-    """
-    score    : int 0-100
-    reasons  : flat list of strings (legacy / sub-scanner use)
-    sections : list of {"title": str, "items": [str], "severity": str}
-               severity ∈ "critical" | "warning" | "info" | "ok"
-    metadata : dict of extra key-value info to show in the header block
-    """
     score = min(score, 100)
     if score >= 70:
         risk = "HIGH"
@@ -102,6 +112,14 @@ def scan_url(url):
     if not url:
         return _build_result(0, ["No URL provided"])
 
+    url = url.strip()
+
+    # Prepend scheme if missing so urlparse(url).netloc functions correctly
+    if not url.startswith("http://") and not url.startswith("https://"):
+        formatted_url = "https://" + url
+    else:
+        formatted_url = url
+
     # ── Section 1 : Protocol & structure ──────────────────────────
     proto_items = []
     if not url.startswith("https://"):
@@ -118,19 +136,19 @@ def scan_url(url):
                            "pad URLs to hide the real destination or obfuscate phishing domains.")
 
     ip_pattern = re.compile(r"https?://(\d{1,3}\.){3}\d{1,3}")
-    if ip_pattern.match(url):
+    if ip_pattern.match(formatted_url):
         score += 20
         proto_items.append("🚨  URL uses a raw IP address instead of a domain name. "
                            "Legitimate services almost never do this — it is a strong "
                            "indicator of a phishing or malware distribution site.")
 
     try:
-        domain = urlparse(url).netloc
+        domain = urlparse(formatted_url).netloc
         parts  = domain.split(".")
         metadata["Domain"] = domain
         if len(parts) > 4:
             score += 10
-            proto_items.append(f"⚠️   Excessive subdomain depth ({len(parts)} levels: {domain}). "
+            proto_items.append(f"⚠️️   Excessive subdomain depth ({len(parts)} levels: {domain}). "
                                "Scammers add fake brand names as subdomains to trick users "
                                "(e.g. secure.paypal.login.evil.com).")
     except Exception:
@@ -160,7 +178,7 @@ def scan_url(url):
     # ── Section 3 : Domain age (WHOIS) ────────────────────────────
     whois_items = []
     try:
-        domain = urlparse(url).netloc
+        domain = urlparse(formatted_url).netloc
         info   = whois.whois(domain)
         creation = info.creation_date
         if isinstance(creation, list):
@@ -187,7 +205,7 @@ def scan_url(url):
         else:
             whois_items.append("⚠️   WHOIS returned no creation date — domain age unverifiable.")
     except Exception:
-        whois_items.append("ℹ️   Could not perform WHOIS lookup (network issue or private registration). "
+        whois_items.append("ℹ️️   Could not perform WHOIS lookup (network issue or private registration). "
                            "Domain age could not be verified.")
     sections.append({"title": "Domain Age & WHOIS", "items": whois_items, "severity": "info"})
 
@@ -199,6 +217,42 @@ def scan_url(url):
 #  Phone Number Scanner
 # ══════════════════════════════════════════════════════════════════
 
+def query_live_threat_api(cleaned_number):
+    """
+    Queries a live external threat intelligence or carrier lookup API 
+    to check if a random number is flagged as spam or fraud.
+    """
+    try:
+        # Example: Using a carrier/spam intelligence API endpoint 
+        # (You can replace this URL with services like Twilio Lookup, Numverify, or a custom threat feed)
+        api_url = f"https://api.example-threat-intel.com/v1/lookup?phone={cleaned_number}"
+        
+        # If your API requires a token/key:
+        headers = {"Authorization": "Bearer YOUR_API_KEY"}
+        
+        response = requests.get(api_url, headers=headers, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                "is_spam": data.get("is_spam", False),
+                "risk_score": data.get("risk_score", 0),
+                "source": data.get("source", "Live Threat Intel Database"),
+                "description": data.get("description", "No malicious activity reported")
+            }
+    except Exception as e:
+        # Fallback gracefully if the API is down or offline
+        pass
+        
+    return {"is_spam": False, "risk_score": 0, "source": "None", "description": "Live lookup unreachable"}
+
+# Expanded local database for known scam numbers
+KNOWN_SPAM_DATABASE = {
+    "+911400000000": "Registered Commercial Telemarketer (TRAI 140 Series)",
+    "+919876543210": "Reported Financial Fraud / KYC Scam Number",
+    "+18005550199":  "Known Robocall / Phishing Line",
+}
+
 def scan_phone(number):
     score    = 0
     reasons  = []
@@ -209,73 +263,82 @@ def scan_phone(number):
         return _build_result(0, ["No phone number provided"])
 
     cleaned     = re.sub(r"[\s\-\.\(\)]", "", number)
+    
+    # Auto-normalize standard 10-digit Indian numbers
+    if not cleaned.startswith("+") and len(cleaned) == 10 and cleaned.startswith(("6", "7", "8", "9")):
+        cleaned = "+91" + cleaned
+        
     digits_only = cleaned.lstrip("+")
     metadata["Input"]          = number
     metadata["Cleaned"]        = cleaned
     metadata["Digit Count"]    = str(len(digits_only))
 
-    # ── Section 1 : Format validation ─────────────────────────────
+    # ── Section 1 : Format Validation ─────────────────────────────
     fmt_items = []
     if not re.match(r"^\+?\d+$", cleaned):
         score += 30
-        fmt_items.append("🚨  Number contains non-numeric characters after cleaning. "
-                         "This may indicate spoofing, copy-paste errors, or a fabricated number.")
+        fmt_items.append("🚨  Number contains non-numeric characters after cleaning.")
     else:
         fmt_items.append("✅  Number contains only valid numeric characters.")
 
     if not (7 <= len(digits_only) <= 15):
         score += 25
-        fmt_items.append(f"🚨  Digit count ({len(digits_only)}) is outside the valid ITU-T E.164 "
-                         f"range of 7–15 digits. Real phone numbers cannot have this length.")
+        fmt_items.append(f"🚨  Digit count ({len(digits_only)}) is outside the valid E.164 range (7–15 digits).")
     else:
-        fmt_items.append(f"✅  Digit count ({len(digits_only)}) is within the valid E.164 range (7–15).")
+        fmt_items.append(f"✅  Digit count ({len(digits_only)}) is within the valid E.164 range.")
 
     sections.append({"title": "Format Validation", "items": fmt_items, "severity": "info"})
 
-    # ── Section 2 : Prefix / country code analysis ────────────────
-    prefix_items = []
+    # ── Section 2 : Local Blacklist & Commercial Check ────────────
+    spam_items = []
+    if cleaned in KNOWN_SPAM_DATABASE or number.strip() in KNOWN_SPAM_DATABASE:
+        score += 50
+        desc = KNOWN_SPAM_DATABASE.get(cleaned, KNOWN_SPAM_DATABASE.get(number.strip()))
+        spam_items.append(f"🚨  SPAM BLACKLIST ALERT: Number is flagged as '{desc}'.")
+    elif cleaned.startswith("+91140") or cleaned.startswith("140"):
+        score += 30
+        spam_items.append("⚠️   COMMERCIAL TELEMARKETER: Number begins with a commercial telemarketing prefix (140 series).")
+    elif cleaned.startswith("+91160") or cleaned.startswith("160"):
+        score += 25
+        spam_items.append("⚠️   BULK GATEWAY / ROBOCALL: Number uses a bulk communication gateway prefix.")
+    else:
+        spam_items.append("✅  Number is not present in the local spam blacklist or commercial ranges.")
+
+    sections.append({"title": "Spam & Telemarketer Check", "items": spam_items, "severity": "warning" if score > 0 else "ok"})
+
+    # ── Section 3 : Heuristic & Fraud Call Pattern Analysis ───────
+    fraud_items = []
     scam_prefixes = {
         "+92":  "Pakistan — frequently used in impersonation and lottery scams",
         "+237": "Cameroon — associated with advance-fee fraud",
         "+234": "Nigeria — well-known origin of 419 advance-fee scams",
-        "+216": "Tunisia — used in various phone fraud campaigns",
         "+256": "Uganda — linked to international phone scams",
-        "140":  "Indian premium-rate or service number",
-        "141":  "Indian caller-ID spoofing prefix",
-        "160":  "Indian bulk-SMS gateway prefix",
     }
+    
     hit_prefix = None
     for prefix, explanation in scam_prefixes.items():
         if cleaned.startswith(prefix):
-            score += 30
+            score += 35
             hit_prefix = prefix
-            prefix_items.append(f"🚨  Number begins with '{prefix}' ({explanation}). "
-                                 "While not conclusive, this prefix has a disproportionate "
-                                 "association with scam calls in fraud databases.")
+            fraud_items.append(f"🚨  HIGH-RISK ORIGIN: Number begins with international scam-prone prefix '{prefix}' ({explanation}).")
             break
+            
     if not hit_prefix:
-        prefix_items.append("✅  Number prefix does not match any known high-risk country code or service prefix.")
+        fraud_items.append("✅  Country code origin is standard with no regional risk flags.")
 
-    sections.append({"title": "Prefix & Country Code", "items": prefix_items, "severity": "warning" if hit_prefix else "ok"})
-
-    # ── Section 3 : Pattern analysis ──────────────────────────────
-    pattern_items = []
     if re.match(r"^(\d)\1{6,}$", digits_only):
-        score += 20
-        pattern_items.append(f"🚨  Number is composed of a single repeated digit (e.g. 9999999999). "
-                              "Real telephone numbers never look like this — almost certainly fake.")
+        score += 25
+        fraud_items.append("🚨  SPOOFED / FAKE NUMBER: Number is composed of a single repeated digit.")
     elif digits_only in "01234567890123456789" or digits_only in "98765432109876543210":
-        score += 15
-        pattern_items.append("⚠️   Number follows a sequential digit pattern (e.g. 1234567890). "
-                              "This is a strong indicator of a placeholder or fabricated number.")
+        score += 20
+        fraud_items.append("⚠️   SEQUENTIAL PATTERN: Number follows a sequential digit pattern.")
     else:
-        pattern_items.append("✅  No suspicious repeating or sequential digit pattern detected.")
+        fraud_items.append("✅  No suspicious repeating or sequential digit pattern detected.")
 
-    sections.append({"title": "Pattern Analysis", "items": pattern_items, "severity": "info"})
+    sections.append({"title": "Heuristic Risk Analysis", "items": fraud_items, "severity": "warning" if hit_prefix else "ok"})
 
     reasons = [item for s in sections for item in s["items"]]
     return _build_result(score, reasons, sections, metadata)
-
 
 # ══════════════════════════════════════════════════════════════════
 #  Email Scanner
@@ -998,8 +1061,8 @@ def scan_photo(image_path):
 # ══════════════════════════════════════════════════════════════════
 
 def detect_input_type(value):
-    value = value.strip()
-    if value.startswith("http://") or value.startswith("https://") or value.startswith("www."):
+    value = value.strip().lower()
+    if value.startswith("http://") or value.startswith("https://") or value.startswith("www.") or ("." in value and "@" not in value):
         return "url"
     if re.match(r"^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9]+$", value) and "." not in value.split("@")[-1]:
         return "upi"
@@ -1043,7 +1106,6 @@ def _center(text, width=W):
 def _wrap(text, indent=6, width=W):
     """Simple word-wrap that respects leading emoji / bullet characters."""
     import textwrap
-    # preserve existing leading spaces/bullets on first line
     lead  = len(text) - len(text.lstrip())
     first = text[:lead]
     rest  = text[lead:]
@@ -1113,9 +1175,7 @@ def print_result(label, result):
             print(f"  ◈  {title.upper()}")
             print(_hr("─"))
             for item in items:
-                # split item into lines for wrapping
                 for line in item.split("\n"):
-                    # preserve indented continuation lines
                     if line.startswith("     "):
                         print(f"       {line.lstrip()}")
                     else:
@@ -1127,7 +1187,6 @@ def print_result(label, result):
                                 print()
             print()
     else:
-        # Fallback to flat reasons list
         print(_hr("─"))
         print("  FINDINGS")
         print(_hr("─"))

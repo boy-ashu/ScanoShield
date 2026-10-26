@@ -36,6 +36,7 @@ from .fraud_dectector import (
     scan_upi,
     scan_qr,
     scan_social,
+    scan_photo,
     _build_result
 )
 
@@ -565,7 +566,6 @@ def audit_password_api(request):
 
 @login_required
 def register_professional(request):
-    """एक ही पोर्टल से यूजर रजिस्ट्रेशन और पेंडिंग/अप्रूव्ड स्टेटस हैंडल करना"""
     profile, created = UserProfile.objects.get_or_create(user=request.user)
     
     if request.method == "POST":
